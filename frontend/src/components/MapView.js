@@ -38,7 +38,7 @@ const MapView = () => {
   const [polylines, setPolylines] = useState([]);
   const [alertShown, setAlertShown] = useState(false); // 👈 Estado para evitar múltiples alertas
   // Usa el hook para cargar Google Maps
-  const { mapsLoaded, error } = useGoogleMaps('AIzaSyAMjxYQI5k2o7y5UfhHkCygXntEitomueo');
+  const { mapLoaded, error } = useGoogleMaps(process.env.REACT_APP_GOOGLE_MAPS_API_KEY);
   // Inicializar el mapa
   useEffect(() => {
     if (!mapsLoaded || error) return;
