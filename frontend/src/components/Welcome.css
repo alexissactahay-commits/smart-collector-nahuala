@@ -1,0 +1,100 @@
+/* Welcome.css - Versión FINAL (Logo Redondo) */
+
+.welcome-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f0f8ff, #e6f7e6);
+    padding: 20px;
+}
+
+.welcome-box {
+    background: white;
+    border-radius: 15px;
+    padding: 15px 30px !important; 
+    max-width: 600px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    text-align: center;
+    display: flex;
+    flex-direction: column; 
+    align-items: center;
+}
+
+.welcome-box > *:first-child {
+    margin-top: 0 !important;
+}
+
+/* 🛑 CLAVE DE SOLUCIÓN: Hacemos el logo redondo */
+.logo {
+    width: auto !important; 
+    height: auto !important; 
+    max-width: 80px !important; 
+    max-height: 80px !important; 
+    
+    /* 🚨 CLAVE: Convierte el logo en un círculo */
+    border-radius: 50% !important; 
+    /* Opcional: Asegura que el contenido que se desborda se oculte (para formas) */
+    overflow: hidden !important; 
+    /* Opcional: Un pequeño borde para que el círculo resalte más */
+    border: 3px solid rgba(0, 120, 212, 0.2); 
+    /* Opcional: Sombra sutil para darle profundidad */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); 
+    
+    margin-bottom: 5px !important; 
+    margin-top: 0 !important; 
+}
+
+/* Encabezado sin margen superior y margen inferior mínimo */
+h1 {
+    color: #0078d4;
+    font-size: 2.2rem;
+    margin: 0 0 5px 0 !important; 
+    font-weight: 700;
+    line-height: 1.1; 
+}
+
+/* Párrafos con margen inferior muy reducido */
+p {
+    color: #333;
+    line-height: 1.5; 
+    margin: 0 0 5px 0 !important; 
+    font-size: 0.95rem;
+}
+
+.buttons {
+    display: flex;
+    gap: 15px; 
+    justify-content: center;
+    margin-top: 15px; 
+}
+
+.btn {
+    padding: 12px 25px; 
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    border: none; 
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: #0078d4;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #005a9e;
+    box-shadow: 0 4px 10px rgba(0, 120, 212, 0.3);
+}
+
+.btn-secondary {
+    background: #28a745;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #218838;
+    box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
+}

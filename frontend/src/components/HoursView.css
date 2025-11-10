@@ -1,0 +1,46 @@
+.hours-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #f8f9fa;
+}
+
+.hours-container h2 {
+  text-align: center;
+  color: #0078d4;
+  margin-bottom: 30px;
+  font-size: 2rem;
+}
+
+.hours-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.hour-card {
+  background: white;
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  text-align: center;
+  transition: transform 0.2s;
+}
+
+.hour-card:hover {
+  transform: translateY(-5px);
+}
+
+.hour-card h3 {
+  color: #0078d4;
+  margin-top: 0;
+  font-size: 1.5rem;
+}
+
+.hour-time {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #28a745;
+  margin-top: 15px;
+}

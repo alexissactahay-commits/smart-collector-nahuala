@@ -1,0 +1,231 @@
+/* Archivo: frontend/src/components/UserDashboard.css */
+
+.user-dashboard {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    /* Mantenemos tu degradado de fondo original */
+    background: linear-gradient(180deg, #f9fbfd 0%, #eef2f7 100%);
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', 'Segoe UI', sans-serif;
+}
+
+/* Header - Barra superior */
+.user-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    /* Mantenemos tu degradado de fondo original */
+    background: linear-gradient(90deg, #0078d4 0%, #00b4d8 100%);
+    color: white;
+    
+    /* AJUSTE CLAVE: Reducción de altura */
+    padding: 10px 40px; 
+    height: 70px; 
+
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    border-bottom-left-radius: 25px;
+    border-bottom-right-radius: 25px;
+    position: relative;
+    z-index: 10;
+}
+
+/* Contenedor del Logo (para que mantenga el espacio) */
+.logo-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2; 
+    width: 65px; 
+    height: 65px;
+}
+
+/* Estilo del Logo (círculo, como el icono de usuario) */
+.logo {
+    width: 60px; 
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    
+    /* Copiado de las propiedades del icono de usuario */
+    background: rgba(255, 255, 255, 0.25); 
+    padding: 0; 
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); 
+}
+
+/* Título (Centrado Absoluto para el rol) */
+.header-title {
+    /* AJUSTE CLAVE: Centrado absoluto horizontal y vertical */
+    position: absolute; 
+    left: 50%;
+    top: 50%; 
+    transform: translate(-50%, -50%); 
+    z-index: 1; 
+
+    /* RESTAURACIÓN DEL ESTILO DEGRADADO DEL TEXTO */
+    font-size: 1.8rem;
+    margin: 0;
+    font-weight: 700;
+    
+    /* Colores del texto degradado */
+    background: linear-gradient(90deg, #ffffff, #e3f2fd);
+    -webkit-background-clip: text; 
+    -webkit-text-fill-color: transparent;
+    background-clip: text; 
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    letter-spacing: 1px;
+}
+
+
+/* Icono de usuario (mantiene tu código original) */
+.user-icon-container {
+    position: relative;
+    z-index: 2;
+}
+
+.user-icon {
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    transition: 0.3s;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+.user-icon:hover {
+    background: rgba(255, 255, 255, 0.4);
+    transform: scale(1.05);
+}
+
+/* Menú desplegable (mantiene tu código original) */
+.dropdown-menu {
+    position: absolute;
+    top: 70px;
+    right: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    min-width: 220px;
+    overflow: hidden;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.dropdown-menu button {
+    width: 100%;
+    padding: 12px 20px;
+    text-align: left;
+    border: none;
+    background: white;
+    cursor: pointer;
+    font-size: 15px;
+    transition: background 0.3s;
+    color: #333; /* 👈 Cambiado a un gris oscuro para mejor contraste */
+}
+.dropdown-menu button:hover {
+    background: #f0f4f8;
+}
+.logout-button {
+    color: #d90429;
+    font-weight: 600;
+}
+.logout-button:hover {
+    background: #fdeaea;
+}
+
+/* Animación suave */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Contenido principal (mantiene tu código original) */
+.main-content {
+    flex: 1;
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+/* Grid de tarjetas (mantiene tu código original) */
+.card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    display: grid;
+    gap: 30px;
+    width: 100%;
+    max-width: 1200px;
+}
+
+/* Tarjetas (mantiene tu código original) */
+.card {
+    background: white;
+    border-radius: 20px;
+    padding: 35px 20px;
+    /* Mantenemos tu sombra original */
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    border: none;
+}
+.card:hover {
+    transform: translateY(-8px);
+    /* Mantenemos tu sombra de hover original */
+    box-shadow: 0 10px 30px rgba(0, 120, 212, 0.2);
+}
+
+/* Ícono de la tarjeta (mantiene tu código original) */
+.card .icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    color: #0078d4;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    transition: transform 0.3s;
+}
+.card:hover .icon {
+    transform: scale(1.1);
+}
+
+/* Título */
+.card h3 {
+    font-size: 1rem;
+    color: #333;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+/* Fondo decorativo sutil (mantiene tu código original) */
+.card::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at top left, rgba(0, 120, 212, 0.05), transparent 60%);
+    top: 0;
+    left: 0;
+    z-index: 0;
+}
+
+/* Ajustes responsivos */
+@media (max-width: 768px) {
+    .user-header {
+        flex-direction: column;
+        height: auto;
+        padding: 20px;
+        gap: 10px;
+    }
+    .card-grid {
+        gap: 20px;
+    }
+}
