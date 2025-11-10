@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import './SendMessage.css';
 
@@ -12,15 +12,9 @@ const SendMessage = () => {
 
   const token = localStorage.getItem('token');
 
-  // Cargar usuarios y mensajes enviados al montar
-  useEffect(() => {
-    fetchUsers();
-    fetchSentMessages();
-  }, []);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
-      const res = await axios.get('http://localhost:8000/api/admin/users/', {
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}admin/users/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(res.data);
@@ -28,11 +22,11 @@ const SendMessage = () => {
       console.error('Error al cargar usuarios:', err);
       setAlert({ message: 'Error al cargar la lista de usuarios.', type: 'error' });
     }
-  };
+  }, [token]);
 
-  const fetchSentMessages = async () => {
+  const fetchSentMessages = useCallback(async () => {
     try {
-      const res = await axios.get('http://localhost:8000/api/admin/messages/', {
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}admin/messages/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSentMessages(res.data);
@@ -40,7 +34,13 @@ const SendMessage = () => {
       console.error('Error al cargar mensajes enviados:', err);
       setAlert({ message: 'Error al cargar el historial de mensajes.', type: 'error' });
     }
-  };
+  }, [token]);
+
+  // Cargar usuarios y mensajes enviados al montar
+  useEffect(() => {
+    fetchUsers();
+    fetchSentMessages();
+  }, [fetchUsers, fetchSentMessages]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,7 +52,7 @@ const SendMessage = () => {
     setLoading(true);
     try {
       await axios.post(
-        'http://localhost:8000/api/admin/messages/',
+        `${process.env.REACT_APP_API_URL}admin/messages/`,
         {
           message: message.trim(),
           user_id: selectedRecipientId || null // null = enviar a todos

@@ -1,5 +1,5 @@
 // UserReports.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import './UserReports.css';
@@ -11,7 +11,7 @@ const UserReports = () => {
   const [message, setMessage] = useState('');
 
   // Función para cargar reportes
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     const token = localStorage.getItem('token');
     const userRole = localStorage.getItem('userRole');
 
@@ -22,7 +22,7 @@ const UserReports = () => {
     }
 
     try {
-      const res = await axios.get('http://localhost:8000/api/admin/reports/', {
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}admin/reports/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setReports(res.data);
@@ -36,7 +36,7 @@ const UserReports = () => {
       }
       setLoading(false);
     }
-  };
+  }, [navigate]);
 
   // ✅ NUEVA FUNCIÓN: Actualizar el estado de un reporte
   const handleUpdateStatus = async (id, newStatus) => {
@@ -48,7 +48,7 @@ const UserReports = () => {
 
     try {
       await axios.put(
-        `http://localhost:8000/api/admin/reports/${id}/`,
+        `${process.env.REACT_APP_API_URL}admin/reports/${id}/`,
         { status: newStatus },
         {
           headers: { Authorization: `Bearer ${token}` }
@@ -73,7 +73,7 @@ const UserReports = () => {
 
   useEffect(() => {
     fetchReports();
-  }, [navigate]);
+  }, [fetchReports]);
 
   if (loading) {
     return <div className="user-reports-container">Cargando reportes...</div>;

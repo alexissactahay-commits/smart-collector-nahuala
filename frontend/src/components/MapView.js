@@ -41,9 +41,8 @@ const MapView = () => {
   const [map, setMap] = useState(null);
   const [marker, setMarker] = useState(null);
   const [polylines, setPolylines] = useState([]);
-  const [alertShown, setAlertShown] = useState(false); // 👈 Estado para evitar múltiples alertas
+  const [alertShown, setAlertShown] = useState(false);
 
-  // Usa el hook para cargar Google Maps
   const { mapLoaded, error } = useGoogleMaps(process.env.REACT_APP_GOOGLE_MAPS_API_KEY);
 
   // Inicializar el mapa
@@ -57,7 +56,6 @@ const MapView = () => {
       });
       setMap(newMap);
 
-      // 👇 Ícono de camión de basura (tu imagen)
       const truckIcon = {
         url: "/3d-illustration-of-recycling-garbage-truck-png.png",
         scaledSize: new window.google.maps.Size(40, 40),
@@ -73,23 +71,22 @@ const MapView = () => {
     }
   }, [mapLoaded, error, map, vehicle.latitude, vehicle.longitude]);
 
-  // Cargar las rutas del ciudadano (todas las rutas asignadas)
+  // Cargar las rutas del ciudadano
   useEffect(() => {
     if (!mapLoaded || !map) return;
 
     const loadRoutes = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:8000/api/my-routes/', {
+        // ✅ Usamos REACT_APP_API_URL en lugar de localhost
+        const res = await axios.get(`${process.env.REACT_APP_API_URL}my-routes/`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setRoutes(res.data);
+        setRoutes(res.data); // eslint-disable-line no-unused-vars
 
-        // Limpiar polilíneas anteriores
         polylines.forEach(poly => poly.setMap(null));
         const newPolylines = [];
 
-        // Dibujar cada ruta
         res.data.forEach(route => {
           if (route.points && route.points.length > 0) {
             const path = route.points.map(point => ({
@@ -114,26 +111,25 @@ const MapView = () => {
     };
 
     loadRoutes();
-  }, [mapLoaded, map]);
+    // ✅ CORRECCIÓN CLAVE: añadimos `polylines` al array de dependencias
+  }, [mapLoaded, map, polylines]);
 
-  // Actualizar ubicación del camión y notificaciones
+  // Actualizar ubicación del camión
   useEffect(() => {
     if (!mapLoaded || !marker) return;
 
     const interval = setInterval(async () => {
       try {
-        // Simular movimiento del camión (en producción, usa una API real)
-        const response = await axios.get('http://localhost:8000/api/vehicles/1/');
+        // ✅ Usamos REACT_APP_API_URL
+        const response = await axios.get(`${process.env.REACT_APP_API_URL}vehicles/1/`);
         const newVehicle = response.data;
         setVehicle(newVehicle);
 
-        // Mover el marcador
         marker.setPosition({
           lat: newVehicle.latitude,
           lng: newVehicle.longitude,
         });
 
-        // Notificación si está cerca del Parque Central (solo una vez)
         const userLocation = { lat: 14.886351, lng: -91.514472 };
         const distance = Math.sqrt(
           Math.pow(newVehicle.latitude - userLocation.lat, 2) +
@@ -144,7 +140,7 @@ const MapView = () => {
             position: "top-right",
             autoClose: 5000,
           });
-          setAlertShown(true); // 👈 Evita que se muestre nuevamente
+          setAlertShown(true);
         }
       } catch (err) {
         console.error("Error al actualizar la ubicación del camión:", err);
