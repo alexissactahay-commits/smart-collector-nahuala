@@ -4,3 +4,8 @@ __pycache__/
 .env 
 node_modules/ 
 .vscode/ 
+"venv/" 
+"__pycache__/" 
+"*.sqlite3" 
+".env" 
+"node_modules/" 
