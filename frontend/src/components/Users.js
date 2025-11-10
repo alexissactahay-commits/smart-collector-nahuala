@@ -1,5 +1,5 @@
 // Users.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import './Users.css';
@@ -10,22 +10,10 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
 
-  // Verificar autenticación al montar
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('userRole');
-    if (!token || role !== 'admin') {
-      navigate('/login', { replace: true });
-      return;
-    }
-    fetchUsers();
-  }, [navigate]);
-
-  // Función para cargar usuarios
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:8000/api/admin/users/', {
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}admin/users/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(res.data);
@@ -39,13 +27,24 @@ const Users = () => {
       }
       setLoading(false);
     }
-  };
+  }, [navigate]);
+
+  // Verificar autenticación al montar
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('userRole');
+    if (!token || role !== 'admin') {
+      navigate('/login', { replace: true });
+      return;
+    }
+    fetchUsers();
+  }, [navigate, fetchUsers]);
 
   // Función para cambiar el rol de un usuario
   const updateRole = async (userId, newRole) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put('http://localhost:8000/api/admin/users/', {
+      await axios.put(`${process.env.REACT_APP_API_URL}admin/users/`, {
         id: userId,
         role: newRole
       }, {
@@ -68,7 +67,7 @@ const Users = () => {
   const toggleActive = async (userId, isActive) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put('http://localhost:8000/api/admin/users/', {
+      await axios.put(`${process.env.REACT_APP_API_URL}admin/users/`, {
         id: userId,
         is_active: !isActive
       }, {
