@@ -2,15 +2,15 @@ import os
 from decouple import config
 from pathlib import Path
 from datetime import timedelta
-import dj_database_url  # ✅ Asegúrate de tener esto en requirements.txt
+import dj_database_url
 
 # Google OAuth
 GOOGLE_CLIENT_ID = '954992204322-2ubdebhj8126lk22v2isa1lmjqv4hc1k.apps.googleusercontent.com'
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# 🔐 SECRET_KEY: usa la que generaste y pusiste en Render
-SECRET_KEY = config('hF5Tpi2k6WeOzIdm-hZS-1A8qQMj6Q3MX4vy7fY5lkGJEjZr5kMTgu9sI5_OVbrGCt4')
+# 🔐 SECRET_KEY: ahora lee desde la variable de entorno 'SECRET_KEY'
+SECRET_KEY = config('SECRET_KEY')
 
 # ✅ Usuario personalizado
 AUTH_USER_MODEL = 'core.User'
@@ -18,12 +18,13 @@ AUTH_USER_MODEL = 'core.User'
 # 🚫 DEBUG = False en producción
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-# 🌐 ALLOWED_HOSTS: solo tu dominio y el de Render
+# 🌐 ALLOWED_HOSTS
 ALLOWED_HOSTS = [
     'smartcollectorolintepeque.com',
     'www.smartcollectorolintepeque.com',
     'smart-collector.onrender.com',
-    'localhost',  # para pruebas locales si usas la misma config
+    'localhost',
+    '127.0.0.1',
 ]
 
 # 👇 django-allauth
@@ -79,12 +80,20 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'smart_collector.wsgi.application'
 
-# 🗃️ DATABASE: usa DATABASE_URL de Render
-DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL')
-    )
-}
+# 🗃️ DATABASE
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL)
+    }
+else:
+    # (opcional) fallback para desarrollo local con SQLite
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # 🔒 Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -95,7 +104,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # 🌍 Internacionalización
-LANGUAGE_CODE = 'es-es'  # Cambiado a español
+LANGUAGE_CODE = 'es-es'
 TIME_ZONE = 'America/Guatemala'
 USE_I18N = True
 USE_TZ = True
@@ -108,7 +117,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # 🔄 CORS
-CORS_ALLOW_ALL_ORIGINS = True  # Solo aceptable si es un proyecto académico. Para producción futura, usa CORS_ALLOWED_ORIGINS.
+CORS_ALLOW_ALL_ORIGINS = True
 
 # 🔑 REST Framework + JWT
 REST_FRAMEWORK = {
