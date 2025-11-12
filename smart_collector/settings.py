@@ -2,31 +2,32 @@ import os
 from decouple import config
 from pathlib import Path
 from datetime import timedelta
+import dj_database_url  # ✅ Asegúrate de tener esto en requirements.txt
 
+# Google OAuth
 GOOGLE_CLIENT_ID = '954992204322-2ubdebhj8126lk22v2isa1lmjqv4hc1k.apps.googleusercontent.com'
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+# 🔐 SECRET_KEY: usa la que generaste y pusiste en Render
+SECRET_KEY = config('hF5Tpi2k6WeOzIdm-hZS-1A8qQMj6Q3MX4vy7fY5lkGJEjZr5kMTgu9sI5_OVbrGCt4')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-@=x7px4&z##iiu&92hkyi$e%&0%(euypps6^$3e6&i%+tmu7hy'
-
-# Configuración del modelo de usuario personalizado
+# ✅ Usuario personalizado
 AUTH_USER_MODEL = 'core.User'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# 🚫 DEBUG = False en producción
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-# 👇👇👇 CONFIGURACIÓN OBLIGATORIA PARA django-allauth 👇👇👇
+# 🌐 ALLOWED_HOSTS: solo tu dominio y el de Render
+ALLOWED_HOSTS = [
+    'smartcollectorolintepeque.com',
+    'www.smartcollectorolintepeque.com',
+    'smart-collector.onrender.com',
+    'localhost',  # para pruebas locales si usas la misma config
+]
+
+# 👇 django-allauth
 SITE_ID = 1
-
-# ✅ ¡CORREGIDO! Ahora incluye tu IP real (192.168.1.254) y la anterior (192.168.1.34)
-ALLOWED_HOSTS = ['192.168.1.254', '192.168.1.34', 'localhost', '127.0.0.1']
-
-# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.sites',
@@ -64,7 +65,7 @@ ROOT_URLCONF = 'smart_collector.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'core' / 'templates'],  # 👈 Agregado para correo de recuperación
+        'DIRS': [BASE_DIR / 'core' / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -78,59 +79,38 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'smart_collector.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
+# 🗃️ DATABASE: usa DATABASE_URL de Render
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT'),
-    }
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL')
+    )
 }
 
-# Password validation
-#   https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
+# 🔒 Password validation
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
-#   https://docs.djangoproject.com/en/5.2/topics/i18n/
-
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+# 🌍 Internacionalización
+LANGUAGE_CODE = 'es-es'  # Cambiado a español
+TIME_ZONE = 'America/Guatemala'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
+# 📁 Archivos estáticos
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
+# 🆔 Clave primaria
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ALLOW_ALL_ORIGINS = True
+# 🔄 CORS
+CORS_ALLOW_ALL_ORIGINS = True  # Solo aceptable si es un proyecto académico. Para producción futura, usa CORS_ALLOWED_ORIGINS.
 
-# 🔑 CONFIGURACIÓN DE JWT (REEMPLAZA LA SECCIÓN REST_FRAMEWORK)
+# 🔑 REST Framework + JWT
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -140,14 +120,12 @@ REST_FRAMEWORK = {
     ),
 }
 
-# ⏱️ CONFIGURACIÓN DE JWT (AL FINAL DEL ARCHIVO)
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': False,
     'UPDATE_LAST_LOGIN': False,
-
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
     'VERIFYING_KEY': None,
@@ -155,16 +133,13 @@ SIMPLE_JWT = {
     'ISSUER': None,
     'JWK_URL': None,
     'LEEWAY': 0,
-
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
     'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
-
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
     'TOKEN_TYPE_CLAIM': 'token_type',
     'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
-
     'JTI_CLAIM': 'jti',
 }
