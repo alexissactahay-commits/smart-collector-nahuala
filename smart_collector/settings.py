@@ -22,7 +22,7 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = [
     'smartcollectorolintepeque.com',
     'www.smartcollectorolintepeque.com',
-    'smart-collector.onrender.com',
+    '.onrender.com',  # 👈 Acepta cualquier subdominio de Render
     'localhost',
     '127.0.0.1',
 ]
