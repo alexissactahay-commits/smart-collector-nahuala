@@ -103,10 +103,16 @@ const Login = () => {
             <a onClick={() => navigate('/forgot-password')}>Olvidó su contraseña</a>
           </div>
 
+          <div className="links" style={{ marginTop: '10px' }}>
+            {/* 👇 NUEVO: enlace para registrarse */}
+            <a onClick={() => navigate('/register')} style={{ fontWeight: 'bold' }}>
+              ¿No tiene cuenta? Regístrese aquí
+            </a>
+          </div>
+
           <hr />
 
           {/* 🔕 GOOGLE LOGIN DESACTIVADO */}
-          {/* <GoogleLogin ... /> */} 
         </form>
       </div>
     </div>
@@ -114,6 +120,5 @@ const Login = () => {
 };
 
 export default Login;
-
 
 
