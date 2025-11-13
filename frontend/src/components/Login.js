@@ -1,5 +1,5 @@
 // Login.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Login.css';
@@ -21,6 +21,13 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
+  // 🧹 Limpia tokens viejos al abrir la página
+  useEffect(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('username');
+  }, []);
+
   const apiPost = async (endpoint, data) => {
     try {
       const url = buildURL(endpoint);
@@ -34,7 +41,10 @@ const Login = () => {
       const { access, role, username } = response.data;
 
       // Normalizar rol
-      const normalizedRole = (role || '').toString().trim().toLowerCase();
+      const normalizedRole = (role || '')
+        .toString()
+        .trim()
+        .toLowerCase();
 
       // Guardar datos
       localStorage.setItem('token', access);
@@ -44,17 +54,12 @@ const Login = () => {
       console.log("ROL RECIBIDO:", normalizedRole);
 
       // Redirección por rol (super seguro)
-      switch (normalizedRole) {
-        case 'admin':
-          navigate('/admin-dashboard', { replace: true });
-          break;
-
-        case 'recolector':
-        case 'ciudadano':
-        default:
-          navigate('/user-dashboard', { replace: true });
-          break;
+      if (normalizedRole === 'admin') {
+        navigate('/admin-dashboard', { replace: true });
+      } else {
+        navigate('/user-dashboard', { replace: true });
       }
+
     } catch (error) {
       console.error('Error de API:', error.response?.data || error.message);
       throw error;
@@ -64,13 +69,18 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // 🧹 Borra antes de loguear para evitar tokens viejos
+    localStorage.removeItem('token');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('username');
+
     if (!identifier.trim() || !password.trim()) {
       alert('Por favor llene todos los campos.');
       return;
     }
 
     try {
-      // IMPORTANTE: NO agregar "api/" aquí
+      // NO agregar "api/" aquí
       await apiPost('/login/', {
         identifier: identifier.trim(),
         password,
@@ -87,7 +97,7 @@ const Login = () => {
         <img src="/Log_smar_collector.png" alt="Logo Smart Collector" className="logo" />
 
         <form onSubmit={handleSubmit}>
-          
+
           <div className="input-group">
             <label>Correo Electrónico o Usuario</label>
             <input
@@ -134,4 +144,5 @@ const Login = () => {
 };
 
 export default Login;
+
 
