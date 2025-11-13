@@ -2,56 +2,61 @@ import os
 from pathlib import Path
 from datetime import timedelta
 
-# BASE_DIR: ruta base del proyecto
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# 🔐 SECRET_KEY: clave secreta (puedes dejar una fija en local)
-SECRET_KEY = os.getenv('SECRET_KEY', 'clave-super-secreta-smart-collector')
+# SECRET KEY desde variables de entorno
+SECRET_KEY = os.getenv('SECRET_KEY')
 
-# ✅ Usuario personalizado
-AUTH_USER_MODEL = 'core.User'
-
-# 🚫 DEBUG: debe ser False en producción
+# DEBUG siempre False en Render
 DEBUG = False
 
-# 🌐 ALLOWED_HOSTS (Incluyendo Render y tu dominio)
+# -----------------------------------------------------------------------------
+# ALLOWED HOSTS
+# -----------------------------------------------------------------------------
 ALLOWED_HOSTS = [
     'smartcollectorolintepeque.com',
     'www.smartcollectorolintepeque.com',
-    'smart-collector.onrender.com',   # 👈 backend en Render
     '.onrender.com',
     'localhost',
     '127.0.0.1',
 ]
 
-# 👇 django-allauth
-SITE_ID = 1
-
+# -----------------------------------------------------------------------------
+# APPS
+# -----------------------------------------------------------------------------
 INSTALLED_APPS = [
-    # 📌 CORS debe estar instalado
-    'corsheaders',
-    'django.contrib.sites',
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
-    'allauth.socialaccount.providers.google',
-    'allauth.socialaccount.providers.facebook',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework_simplejwt',
+
+    # Extras
     'rest_framework',
+    'rest_framework_simplejwt',
+    'corsheaders',
+
+    # Social login
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.facebook',
+
+    # App principal
     'core',
 ]
 
+SITE_ID = 1
+
+# -----------------------------------------------------------------------------
+# MIDDLEWARE
+# -----------------------------------------------------------------------------
 MIDDLEWARE = [
-    # 📌 CORS MIDDLEWARE DEBE IR LO MÁS ARRIBA POSIBLE
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    # 📌 Render requiere WhiteNoise para archivos estáticos
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -81,22 +86,26 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'smart_collector.wsgi.application'
 
-# 🗃️ CONFIGURACIÓN DIRECTA DE BASE DE DATOS (Render PostgreSQL)
+# -----------------------------------------------------------------------------
+# DATABASE — USANDO VARIABLES DE ENTORNO DE RENDER
+# -----------------------------------------------------------------------------
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'smart_collector_db',
-        'USER': 'smart_collector_user',
-        'PASSWORD': 'dmthdP2VHZKHEBK0w0sqLd2XmqC5ZcTj',
-        'HOST': 'dpg-d49j9p8gjchc73fe8m2g-a.oregon-postgres.render.com',
-        'PORT': '5432',
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT'),
         'OPTIONS': {
-            'sslmode': 'require',
+            "sslmode": "require",
         },
     }
 }
 
-# 🔒 Validación de contraseñas
+# -----------------------------------------------------------------------------
+# PASSWORD VALIDATION
+# -----------------------------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -104,84 +113,61 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# 🌍 Internacionalización
+# -----------------------------------------------------------------------------
+# INTERNATIONALIZATION
+# -----------------------------------------------------------------------------
 LANGUAGE_CODE = 'es-es'
 TIME_ZONE = 'America/Guatemala'
 USE_I18N = True
 USE_TZ = True
 
-# 📁 Archivos estáticos (WhiteNoise)
+# -----------------------------------------------------------------------------
+# STATIC FILES
+# -----------------------------------------------------------------------------
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# 🆔 Clave primaria
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# 🌐 CSRF_TRUSTED_ORIGINS (necesario para Render y tu dominio)
+# -----------------------------------------------------------------------------
+# CORS & CSRF
+# -----------------------------------------------------------------------------
 CSRF_TRUSTED_ORIGINS = [
-    'https://www.smartcollectorolintepeque.com',
     'https://smartcollectorolintepeque.com',
-    'https://smart-collector.onrender.com',
-    'https://*.onrender.com',
+    'https://www.smartcollectorolintepeque.com',
+    'https://*.onrender.com'
 ]
 
-# 🔄 CORS: configuración completa
-CORS_ALLOW_ALL_ORIGINS = False
-
 CORS_ALLOWED_ORIGINS = [
-    "https://www.smartcollectorolintepeque.com",
     "https://smartcollectorolintepeque.com",
-    "https://smart-collector.onrender.com",  # 👈 backend Render
-    "http://localhost:3000",                 # para pruebas locales
+    "https://www.smartcollectorolintepeque.com",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
 
-# Métodos permitidos
-CORS_ALLOWED_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]
-
-# Cabeceras permitidas
-CORS_ALLOW_HEADERS = [
-    "accept",
-    "accept-encoding",
-    "authorization",
-    "content-type",
-    "origin",
-    "x-csrftoken",
-    "user-agent",
-]
-
-# Cabeceras que el navegador puede leer
-CORS_EXPOSE_HEADERS = [
-    "Content-Type",
-    "X-CSRFToken",
-]
-
-# 🔑 REST Framework + JWT
+# -----------------------------------------------------------------------------
+# DJANGO REST & JWT
+# -----------------------------------------------------------------------------
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
+    )
 }
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# 🔧 Google OAuth (si lo usas)
-GOOGLE_CLIENT_ID = '954992204322-2ubdebhj8126lk22v2isa1lmjqv4hc1k.apps.googleusercontent.com'
+# -----------------------------------------------------------------------------
+# Google OAuth
+# -----------------------------------------------------------------------------
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+
+# -----------------------------------------------------------------------------
+# USER CUSTOM MODEL
+# -----------------------------------------------------------------------------
+AUTH_USER_MODEL = "core.User"
