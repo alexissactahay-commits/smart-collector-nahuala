@@ -6,28 +6,28 @@ import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ==========================
+# =======================================
 # 🔐 SECRET KEY
-# ==========================
+# =======================================
 SECRET_KEY = config("SECRET_KEY")
 
-# ==========================
-# 🚀 DEBUG (Render requiere False)
-# ==========================
+# =======================================
+# 🚀 DEBUG (Render = False)
+# =======================================
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-# ==========================
+# =======================================
 # 🌐 ALLOWED HOSTS
-# ==========================
+# =======================================
 ALLOWED_HOSTS = [
     "smartcollectorolintepeque.com",
     "www.smartcollectorolintepeque.com",
     ".onrender.com"
 ]
 
-# ==========================
+# =======================================
 # 📦 INSTALLED APPS
-# ==========================
+# =======================================
 INSTALLED_APPS = [
     "corsheaders",
     "django.contrib.sites",
@@ -43,12 +43,12 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt",
-    "core"
+    "core",
 ]
 
-# ==========================
+# =======================================
 # 🔧 MIDDLEWARE
-# ==========================
+# =======================================
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
@@ -63,9 +63,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "smart_collector.urls"
 
-# ==========================
-# 🗃 DATABASE (Render)
-# ==========================
+# =======================================
+# 🗃 DATABASE (Render PostgreSQL)
+# =======================================
 DATABASES = {
     "default": dj_database_url.parse(
         config("DATABASE_URL"),
@@ -74,30 +74,32 @@ DATABASES = {
     )
 }
 
-# ==========================
-# 🌎 CORS
-# ==========================
+# =======================================
+# 🌎 CORS & CSRF
+# =======================================
 CORS_ALLOWED_ORIGINS = [
     "https://www.smartcollectorolintepeque.com",
-    "https://smartcollectorolintepeque.com"
+    "https://smartcollectorolintepeque.com",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://smartcollectorolintepeque.com",
     "https://www.smartcollectorolintepeque.com",
-    "https://*.onrender.com"
+    "https://*.onrender.com",
 ]
 
-# ==========================
-# 🌐 STATIC FILES
-# ==========================
+CORS_ALLOW_CREDENTIALS = True
+
+# =======================================
+# 📁 STATIC FILES (Render + Whitenoise)
+# =======================================
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# ==========================
+# =======================================
 # 🔑 JWT
-# ==========================
+# =======================================
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -114,11 +116,14 @@ SIMPLE_JWT = {
     "SIGNING_KEY": SECRET_KEY,
 }
 
-# ==========================
-# GOOGLE LOGIN
-# ==========================
+# =======================================
+# 🔐 GOOGLE LOGIN
+# =======================================
 GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID")
 
+# =======================================
 # AUTO FIELD
+# =======================================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
 
