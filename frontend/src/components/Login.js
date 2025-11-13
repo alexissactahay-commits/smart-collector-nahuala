@@ -5,23 +5,20 @@ import axios from 'axios';
 import { GoogleLogin } from '@react-oauth/google';
 import './Login.css';
 
-// ✅ Usa la variable de entorno
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+// 🔥 URL REAL DE BACKEND EN RENDER
+const API_URL = process.env.REACT_APP_API_URL || 'https://smart-collector.onrender.com/api';
 
 const Login = () => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  // Función auxiliar para construir la URL de manera segura y manejar la respuesta
-  // Corregida para evitar la duplicación de '/api/'
+  // Función auxiliar para POST seguro
   const apiPost = async (endpoint, data) => {
-    // 1. Limpia cualquier barra final de API_URL.
     const baseURL = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
 
-    // 🛑 CORRECCIÓN CLAVE: NO agregamos '/api/' aquí. 
-    // Asumimos que la baseURL de Render ya trae el '/api' si es necesario.
-    const url = `${baseURL}/${endpoint}`;
+    const url = `${baseURL}/${cleanEndpoint}`;
 
     try {
       const response = await axios.post(url, data);
@@ -48,7 +45,7 @@ const Login = () => {
     }
   };
 
-  // Inicializa el SDK de Facebook
+  // Inicializar SDK de Facebook
   useEffect(() => {
     if (window.FB) return;
 
@@ -65,6 +62,7 @@ const Login = () => {
         version: 'v20.0'
       });
     };
+
     document.head.appendChild(script);
 
     return () => {
@@ -75,13 +73,13 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const cleanIdentifier = identifier.trim();
+
     if (!cleanIdentifier || !password.trim()) {
       alert('Por favor, complete todos los campos.');
       return;
     }
 
     try {
-      // Usa la función corregida, solo pasando el endpoint final
       await apiPost('login/', {
         identifier: cleanIdentifier,
         password: password
@@ -99,14 +97,12 @@ const Login = () => {
 
     window.FB.login((response) => {
       if (response.authResponse) {
-        // Usa la función corregida
         apiPost('facebook-login/', {
           access_token: response.authResponse.accessToken
-        })
-          .catch(err => {
-            console.error('Error en login con Facebook:', err);
-            alert('Error al iniciar sesión con Facebook. Por favor, inténtelo de nuevo.');
-          });
+        }).catch(err => {
+          console.error('Error en login con Facebook:', err);
+          alert('Error al iniciar sesión con Facebook. Por favor, inténtelo de nuevo.');
+        });
       } else {
         alert('Login con Facebook cancelado o fallido.');
       }
@@ -117,6 +113,7 @@ const Login = () => {
     <div className="login-container">
       <div className="login-box">
         <img src="/Log_smar_collector.png" alt="Logo Smart Collector" className="logo" />
+
         <form onSubmit={handleSubmit}>
           <div className="input-group">
             <label>Correo Electrónico o Usuario</label>
@@ -128,6 +125,7 @@ const Login = () => {
               required
             />
           </div>
+
           <div className="input-group">
             <label>Contraseña</label>
             <input
@@ -138,7 +136,9 @@ const Login = () => {
               required
             />
           </div>
+
           <button type="submit" className="btn-login">Iniciar Sesión</button>
+
           <div className="links">
             <a
               href="#forgot"
@@ -150,11 +150,12 @@ const Login = () => {
               Olvidó su Contraseña
             </a>
           </div>
+
           <hr />
+
           <GoogleLogin
             onSuccess={async (credentialResponse) => {
               try {
-                // Usa la función corregida
                 await apiPost('google-login/', {
                   token: credentialResponse.credential
                 });
@@ -166,18 +167,8 @@ const Login = () => {
             onError={() => {
               alert('Error en el login con Google');
             }}
-
-            // No se usa la prop useOneTap, eliminando la advertencia.
-            render={({ onClick }) => (
-              <button
-                type="button"
-                onClick={onClick}
-                className="btn-social google"
-              >
-                <span style={{ marginRight: '10px' }}>🟢</span> Iniciar con Google
-              </button>
-            )}
           />
+
           <button
             type="button"
             className="btn-social facebook"
@@ -185,6 +176,7 @@ const Login = () => {
           >
             <span style={{ marginRight: '10px' }}>🔵</span> Iniciar con Facebook
           </button>
+
           <div className="register-link">
             Si no posee una cuenta. <a href="/register">Crea una aquí</a>
           </div>
