@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config("SECRET_KEY")
 
 # =======================================
-# 🚀 DEBUG (Render = False)
+# 🚀 DEBUG
 # =======================================
 DEBUG = config("DEBUG", default=False, cast=bool)
 
@@ -22,7 +22,7 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 ALLOWED_HOSTS = [
     "smartcollectorolintepeque.com",
     "www.smartcollectorolintepeque.com",
-    ".onrender.com"
+    ".onrender.com",
 ]
 
 # =======================================
@@ -35,14 +35,17 @@ INSTALLED_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
+
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+
     "rest_framework",
     "rest_framework_simplejwt",
+
     "core",
 ]
 
@@ -56,7 +59,6 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
 
-    # 🔥 Requerido por Allauth
     "allauth.account.middleware.AccountMiddleware",
 
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -68,28 +70,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = "smart_collector.urls"
 
 # =======================================
-# 🧩 TEMPLATES (OBLIGATORIO)
-# =======================================
-TEMPLATES = [
-    {
-        "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
-        "APP_DIRS": True,
-        "OPTIONS": {
-            "context_processors": [
-                "django.template.context_processors.debug",
-                "django.template.context_processors.request",
-                "django.contrib.auth.context_processors.auth",
-                "django.contrib.messages.context_processors.messages",
-            ],
-        },
-    },
-]
-
-WSGI_APPLICATION = "smart_collector.wsgi.application"
-
-# =======================================
-# 🗃 DATABASE (Render PostgreSQL)
+# 🗃 DATABASE
 # =======================================
 DATABASES = {
     "default": dj_database_url.parse(
@@ -100,16 +81,11 @@ DATABASES = {
 }
 
 # =======================================
-# 🔒 AUTH MODEL (IMPORTANTE)
-# =======================================
-AUTH_USER_MODEL = "auth.User"
-
-# =======================================
-# 🌎 CORS & CSRF
+# 🌎 CORS + CSRF
 # =======================================
 CORS_ALLOWED_ORIGINS = [
-    "https://www.smartcollectorolintepeque.com",
     "https://smartcollectorolintepeque.com",
+    "https://www.smartcollectorolintepeque.com",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -121,7 +97,7 @@ CSRF_TRUSTED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 # =======================================
-# 📁 STATIC FILES (Render + Whitenoise)
+# 📁 STATIC FILES
 # =======================================
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
@@ -145,6 +121,11 @@ SIMPLE_JWT = {
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
 }
+
+# =======================================
+# 🔐 CUSTOM USER MODEL (OBLIGATORIO)
+# =======================================
+AUTH_USER_MODEL = "core.User"
 
 # =======================================
 # 🔐 GOOGLE LOGIN
