@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Login.css';
 
+const API_URL = 'https://smart-collector.onrender.com'; // ✅ URL de producción
+
 const Login = () => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -46,7 +48,7 @@ const Login = () => {
         client_id: '954992204322-2ubdebhj8126lk22v2isa1lmjqv4hc1k.apps.googleusercontent.com',
         callback: async (credentialResponse) => {
           try {
-            const res = await axios.post('http://localhost:8000/api/google-login/', {
+            const res = await axios.post(`${API_URL}/api/google-login/`, {
               token: credentialResponse.credential
             });
             const { access, role, username } = res.data;
@@ -86,7 +88,7 @@ const Login = () => {
     }
 
     try {
-      const response = await axios.post('http://localhost:8000/api/login/', {
+      const response = await axios.post(`${API_URL}/api/login/`, {
         identifier: cleanIdentifier,
         password: password
       });
@@ -121,7 +123,7 @@ const Login = () => {
 
     window.FB.login((response) => {
       if (response.authResponse) {
-        axios.post('http://localhost:8000/api/facebook-login/', {
+        axios.post(`${API_URL}/api/facebook-login/`, {
           access_token: response.authResponse.accessToken
         })
         .then(res => {

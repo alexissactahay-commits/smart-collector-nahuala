@@ -615,5 +615,8 @@ class ReportViewSet(viewsets.ModelViewSet):
     serializer_class = ReportSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+def home_view(request):
+    return HttpResponse("¡Bienvenido a Smart Collector! Esta es la página de inicio.")
+
 def dashboard_view(request):
     return HttpResponse(status=200)
