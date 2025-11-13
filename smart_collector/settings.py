@@ -23,7 +23,7 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = [
     'smartcollectorolintepeque.com',
     'www.smartcollectorolintepeque.com',
-    '.onrender.com',
+    '.onrender.com', # Permite todos los subdominios de Render
     'localhost',
     '127.0.0.1',
 ]
@@ -53,7 +53,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     # 📌 CORS MIDDLEWARE DEBE IR LO MÁS ARRIBA POSIBLE
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware', 
     'django.middleware.security.SecurityMiddleware',
     # 📌 Render requiere WhiteNoise para archivos estáticos, agrégalo aquí:
     'whitenoise.middleware.WhiteNoiseMiddleware', 
@@ -85,20 +85,34 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'smart_collector.wsgi.application'
 
-# 🗃️ DATABASE
-DATABASE_URL = os.environ.get('DATABASE_URL')
-if DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL)
-    }
-else:
-    # (opcional) fallback para desarrollo local con SQLite
+# 🗃️ DATABASE: CONFIGURACIÓN PARA RENDER/PRODUCCIÓN
+# Usa try/except para manejar el caso en que DATABASE_URL no exista (ej: testing local)
+try:
+    # Intenta obtener la URL de la BD desde el entorno (usando decouple)
+    DATABASE_URL = config('DATABASE_URL')
+    if DATABASE_URL:
+        # Usa dj_database_url para parsear la URL de Render (PostgreSQL)
+        # Importante: el parámetro 'conn_max_age' mantiene la conexión viva
+        DATABASES = {
+            'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+        }
+    else:
+        # Fallback para desarrollo local con SQLite
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
+except Exception as e:
+    # Si hay algún problema con la lectura de la variable, usa SQLite local como último recurso.
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+
 
 # 🔒 Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -123,8 +137,14 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # 🆔 Clave primaria
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# 🔄 CORS: ¡LA SOLUCIÓN A TU ERROR!
-# Al usar la lista, le dices a Django: "Solo estos dominios son seguros y pueden llamarme."
+# 🌐 CSRF_TRUSTED_ORIGINS: NECESARIO si el frontend está en un dominio diferente
+CSRF_TRUSTED_ORIGINS = [
+    'https://www.smartcollectorolintepeque.com',
+    'https://smartcollectorolintepeque.com',
+    'https://*.render.com', # Permitir el subdominio de Render
+]
+
+# 🔄 CORS: ¡La lista de orígenes que tienen permiso de hacer peticiones!
 CORS_ALLOWED_ORIGINS = [
     "https://www.smartcollectorolintepeque.com",
     "https://smartcollectorolintepeque.com",
@@ -132,8 +152,6 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 # 💡 Permitir métodos POST para tu API (ya que el login es un POST)
-# Esto no es estrictamente necesario si solo usas el default, pero es buena práctica de seguridad
-# y garantiza que no haya otra regla bloqueando.
 CORS_ALLOWED_METHODS = [
     'DELETE',
     'GET',
@@ -148,8 +166,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    # DEJAMOS IsAuthenticated como default
     'DEFAULT_PERMISSION_CLASSES': (
-        # Considera cambiar a AllowAny para el login, si estás usando JWT
         'rest_framework.permissions.IsAuthenticated', 
     ),
 }
