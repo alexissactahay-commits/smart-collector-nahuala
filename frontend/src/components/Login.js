@@ -5,103 +5,75 @@ import axios from 'axios';
 import { GoogleLogin } from '@react-oauth/google';
 import './Login.css';
 
-// 🔥 API BASE URL
+// ✅ Usa la variable de entorno SIN AGREGAR /api tú mismo
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+// Función correcta para construir URLs
+const buildURL = (endpoint) => {
+  const base = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+
+  // ❗ IMPORTANTE: NO agregamos "api" dos veces
+  if (endpoint.startsWith('/')) {
+    return `${base}${endpoint}`;
+  }
+  return `${base}/${endpoint}`;
+};
 
 const Login = () => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  // 🔥 Función auxiliar para POST a la API
   const apiPost = async (endpoint, data) => {
-
-    // 🔥 Asegurar endpoint final correcto:
-    // TODAS las rutas deben iniciar con /api/
-    const cleanBase = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
-
-    const url = `${cleanBase}/api/${endpoint}`;
-
     try {
-      const response = await axios.post(url, data);
+      const url = buildURL(endpoint); // ← función nueva usada aquí
+
+      const response = await axios.post(url, data, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
       const { access, role, username } = response.data;
 
+      const normalizedRole = role.toLowerCase();
       localStorage.setItem('token', access);
-      localStorage.setItem('userRole', role.toLowerCase());
+      localStorage.setItem('userRole', normalizedRole);
       localStorage.setItem('username', username);
 
-      if (role.toLowerCase() === 'admin') {
-        navigate('/admin-dashboard');
+      if (normalizedRole === 'admin') {
+        navigate('/admin-dashboard', { replace: true });
       } else {
-        navigate('/user-dashboard');
+        navigate('/user-dashboard', { replace: true });
       }
     } catch (error) {
-      console.error("🔥 Error API:", error.response?.data || error.message);
+      console.error('Error de API:', error.response?.data || error.message);
       throw error;
     }
   };
-
-  // Facebook
-  useEffect(() => {
-    if (window.FB) return;
-    const script = document.createElement("script");
-    script.src = "https://connect.facebook.net/es_LA/sdk.js";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      window.FB.init({
-        appId: "1930193997909434",
-        cookie: true,
-        xfbml: true,
-        version: "v20.0",
-      });
-    };
-    document.head.appendChild(script);
-
-    return () => {
-      document.head.removeChild(script);
-    };
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!identifier.trim() || !password.trim()) {
-      alert("Complete todos los campos");
+      alert('Por favor llene todos los campos.');
       return;
     }
 
     try {
-      await apiPost("login/", {
+      await apiPost('api/login/', {
         identifier: identifier.trim(),
-        password: password.trim(),
+        password,
       });
-    } catch {
-      alert("Credenciales inválidas");
+    } catch (error) {
+      alert('Credenciales inválidas.');
     }
-  };
-
-  const handleFacebookLogin = () => {
-    if (!window.FB) {
-      alert("Facebook SDK no está listo.");
-      return;
-    }
-
-    window.FB.login((response) => {
-      if (response.authResponse) {
-        apiPost("facebook-login/", {
-          access_token: response.authResponse.accessToken,
-        });
-      } else {
-        alert("Login con Facebook falló.");
-      }
-    });
   };
 
   return (
     <div className="login-container">
       <div className="login-box">
+
         <img src="/Log_smar_collector.png" alt="Logo Smart Collector" className="logo" />
 
         <form onSubmit={handleSubmit}>
@@ -111,7 +83,7 @@ const Login = () => {
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="Ej: ciudadano@olintepeque.gt"
+              placeholder="Ej: ciudadano"
               required
             />
           </div>
@@ -130,35 +102,21 @@ const Login = () => {
           <button type="submit" className="btn-login">Iniciar Sesión</button>
 
           <div className="links">
-            <a href="/forgot-password">Olvidó su Contraseña</a>
+            <a onClick={() => navigate('/forgot-password')}>Olvidó su contraseña</a>
           </div>
 
           <hr />
 
+          {/* Google Login */}
           <GoogleLogin
             onSuccess={async (credentialResponse) => {
-              try {
-                await apiPost("google-login/", {
-                  token: credentialResponse.credential,
-                });
-              } catch {
-                alert("Error con Google");
-              }
+              await apiPost('api/google-login/', {
+                token: credentialResponse.credential
+              });
             }}
-            onError={() => alert("Error con Google")}
+            onError={() => alert('Error en login con Google')}
           />
 
-          <button
-            type="button"
-            className="btn-social facebook"
-            onClick={handleFacebookLogin}
-          >
-            Iniciar con Facebook
-          </button>
-
-          <div className="register-link">
-            ¿No posee una cuenta? <a href="/register">Crea una aquí</a>
-          </div>
         </form>
       </div>
     </div>
@@ -166,3 +124,4 @@ const Login = () => {
 };
 
 export default Login;
+
