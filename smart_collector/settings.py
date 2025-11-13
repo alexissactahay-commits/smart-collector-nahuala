@@ -5,6 +5,7 @@ from datetime import timedelta
 import dj_database_url
 
 # Google OAuth
+# NOTA: Asegúrate de que este ID sea el que tienes en Google Cloud
 GOOGLE_CLIENT_ID = '954992204322-2ubdebhj8126lk22v2isa1lmjqv4hc1k.apps.googleusercontent.com'
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -18,11 +19,11 @@ AUTH_USER_MODEL = 'core.User'
 # 🚫 DEBUG = False en producción
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-# 🌐 ALLOWED_HOSTS
+# 🌐 ALLOWED_HOSTS (Incluyendo el dominio de Render y el tuyo)
 ALLOWED_HOSTS = [
     'smartcollectorolintepeque.com',
     'www.smartcollectorolintepeque.com',
-    '.onrender.com',  # 👈 Acepta cualquier subdominio de Render
+    '.onrender.com',  # Acepta cualquier subdominio de Render (ej: smart-collector.onrender.com)
     'localhost',
     '127.0.0.1',
 ]
@@ -31,6 +32,8 @@ ALLOWED_HOSTS = [
 SITE_ID = 1
 
 INSTALLED_APPS = [
+    # 📌 CORS debe estar instalado
+    'corsheaders', 
     'django.contrib.sites',
     'allauth',
     'allauth.account',
@@ -45,13 +48,15 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework_simplejwt',
     'rest_framework',
-    'corsheaders',
     'core',
 ]
 
 MIDDLEWARE = [
+    # 📌 CORS MIDDLEWARE DEBE IR LO MÁS ARRIBA POSIBLE
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    # 📌 Render requiere WhiteNoise para archivos estáticos, agrégalo aquí:
+    'whitenoise.middleware.WhiteNoiseMiddleware', 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -112,12 +117,31 @@ USE_TZ = True
 # 📁 Archivos estáticos
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+# 📌 Configuración WhiteNoise para servir archivos estáticos eficientemente en Render
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # 🆔 Clave primaria
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# 🔄 CORS
-CORS_ALLOW_ALL_ORIGINS = True
+# 🔄 CORS: ¡LA SOLUCIÓN A TU ERROR!
+# Al usar la lista, le dices a Django: "Solo estos dominios son seguros y pueden llamarme."
+CORS_ALLOWED_ORIGINS = [
+    "https://www.smartcollectorolintepeque.com",
+    "https://smartcollectorolintepeque.com",
+    "http://localhost:3000", # Para pruebas locales del frontend
+]
+
+# 💡 Permitir métodos POST para tu API (ya que el login es un POST)
+# Esto no es estrictamente necesario si solo usas el default, pero es buena práctica de seguridad
+# y garantiza que no haya otra regla bloqueando.
+CORS_ALLOWED_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
 
 # 🔑 REST Framework + JWT
 REST_FRAMEWORK = {
@@ -125,7 +149,8 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
+        # Considera cambiar a AllowAny para el login, si estás usando JWT
+        'rest_framework.permissions.IsAuthenticated', 
     ),
 }
 
