@@ -31,11 +31,14 @@ ALLOWED_HOSTS = [
 INSTALLED_APPS = [
     "corsheaders",
     "django.contrib.sites",
+
+    # Allauth
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
 
+    # Django Apps
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -43,9 +46,11 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
+    # DRF + JWT
     "rest_framework",
     "rest_framework_simplejwt",
 
+    # Custom App
     "core",
 ]
 
@@ -56,9 +61,11 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
 
+    # requerido por allauth
     "allauth.account.middleware.AccountMiddleware",
 
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -68,6 +75,25 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "smart_collector.urls"
+
+# =======================================
+# 🎨 TEMPLATES (OBLIGATORIO para Admin + Allauth)
+# =======================================
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],  # carpeta opcional
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",  # requerido por allauth
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
 
 # =======================================
 # 🗃 DATABASE
@@ -123,7 +149,7 @@ SIMPLE_JWT = {
 }
 
 # =======================================
-# 🔐 CUSTOM USER MODEL (OBLIGATORIO)
+# 🔐 CUSTOM USER MODEL
 # =======================================
 AUTH_USER_MODEL = "core.User"
 
