@@ -56,7 +56,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
 
-    # 🔥 OBLIGATORIO PARA ALLAUTH
+    # 🔥 Requerido por Allauth
     "allauth.account.middleware.AccountMiddleware",
 
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -68,6 +68,27 @@ MIDDLEWARE = [
 ROOT_URLCONF = "smart_collector.urls"
 
 # =======================================
+# 🧩 TEMPLATES (OBLIGATORIO)
+# =======================================
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = "smart_collector.wsgi.application"
+
+# =======================================
 # 🗃 DATABASE (Render PostgreSQL)
 # =======================================
 DATABASES = {
@@ -77,6 +98,11 @@ DATABASES = {
         ssl_require=True
     )
 }
+
+# =======================================
+# 🔒 AUTH MODEL (IMPORTANTE)
+# =======================================
+AUTH_USER_MODEL = "auth.User"
 
 # =======================================
 # 🌎 CORS & CSRF
@@ -129,5 +155,3 @@ GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID")
 # AUTO FIELD
 # =======================================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-
