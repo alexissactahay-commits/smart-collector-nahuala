@@ -165,7 +165,7 @@ const Login = () => {
             onError={() => {
               alert('Error en el login con Google');
             }}
-            useOneTap={false}
+
             render={({ onClick }) => (
               <button
                 type="button"
