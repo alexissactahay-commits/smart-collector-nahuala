@@ -5,13 +5,47 @@ import axios from 'axios';
 import { GoogleLogin } from '@react-oauth/google';
 import './Login.css';
 
-// ✅ Usa la variable de entorno o Render en producción
+// ✅ Usa la variable de entorno (sin la barra final)
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const Login = () => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+
+  // Función auxiliar para construir la URL de manera segura y manejar la respuesta
+  // Elimina la necesidad de repetir ${API_URL}/api/ en cada llamada
+  const apiPost = async (endpoint, data) => {
+    // 1. Elimina cualquier barra final de API_URL.
+    // 2. Agrega '/api/'.
+    // 3. Agrega el endpoint (ej: 'login/' o 'google-login/').
+    const baseURL = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+    const url = `${baseURL}/api/${endpoint}`;
+
+    try {
+      const response = await axios.post(url, data);
+
+      const { access, role, username } = response.data;
+
+      if (!access || !role) {
+        throw new Error('Respuesta inválida del servidor');
+      }
+
+      const normalizedRole = role.toLowerCase();
+      localStorage.setItem('token', access);
+      localStorage.setItem('userRole', normalizedRole);
+      localStorage.setItem('username', username);
+
+      if (normalizedRole === 'admin') {
+        navigate('/admin-dashboard', { replace: true });
+      } else {
+        navigate('/user-dashboard', { replace: true });
+      }
+    } catch (error) {
+      console.error('Error de API:', error.response?.data || error.message);
+      throw error;
+    }
+  };
 
   // Inicializa el SDK de Facebook
   useEffect(() => {
@@ -46,29 +80,12 @@ const Login = () => {
     }
 
     try {
-      const response = await axios.post(`${API_URL}/api/login/`, {
+      // ✅ Usa la función corregida, solo pasando el endpoint final
+      await apiPost('login/', {
         identifier: cleanIdentifier,
         password: password
       });
-
-      const { access, role, username } = response.data;
-
-      if (!access || !role) {
-        throw new Error('Respuesta inválida del servidor');
-      }
-
-      const normalizedRole = role.toLowerCase();
-      localStorage.setItem('token', access);
-      localStorage.setItem('userRole', normalizedRole);
-      localStorage.setItem('username', username);
-
-      if (normalizedRole === 'admin') {
-        navigate('/admin-dashboard', { replace: true });
-      } else {
-        navigate('/user-dashboard', { replace: true });
-      }
     } catch (error) {
-      console.error('Error de login:', error.response?.data || error.message);
       alert('Credenciales inválidas. Por favor, intente de nuevo.');
     }
   };
@@ -81,29 +98,14 @@ const Login = () => {
 
     window.FB.login((response) => {
       if (response.authResponse) {
-        axios.post(`${API_URL}/api/facebook-login/`, {
+        // ✅ Usa la función corregida
+        apiPost('facebook-login/', {
           access_token: response.authResponse.accessToken
         })
-        .then(res => {
-          const { access, role, username } = res.data;
-          if (!access || !role) {
-            throw new Error('Respuesta inválida del servidor');
-          }
-          const normalizedRole = role.toLowerCase();
-          localStorage.setItem('token', access);
-          localStorage.setItem('userRole', normalizedRole);
-          localStorage.setItem('username', username);
-          
-          if (normalizedRole === 'admin') {
-            navigate('/admin-dashboard', { replace: true });
-          } else {
-            navigate('/user-dashboard', { replace: true });
-          }
-        })
-        .catch(err => {
-          console.error('Error en login con Facebook:', err);
-          alert('Error al iniciar sesión con Facebook. Por favor, inténtelo de nuevo.');
-        });
+          .catch(err => {
+            console.error('Error en login con Facebook:', err);
+            alert('Error al iniciar sesión con Facebook. Por favor, inténtelo de nuevo.');
+          });
       } else {
         alert('Login con Facebook cancelado o fallido.');
       }
@@ -151,23 +153,10 @@ const Login = () => {
           <GoogleLogin
             onSuccess={async (credentialResponse) => {
               try {
-                const res = await axios.post(`${API_URL}/api/google-login/`, {
+                // ✅ Usa la función corregida
+                await apiPost('google-login/', {
                   token: credentialResponse.credential
                 });
-                const { access, role, username } = res.data;
-                if (!access || !role) {
-                  throw new Error('Respuesta inválida del servidor');
-                }
-                const normalizedRole = role.toLowerCase();
-                localStorage.setItem('token', access);
-                localStorage.setItem('userRole', normalizedRole);
-                localStorage.setItem('username', username);
-                
-                if (normalizedRole === 'admin') {
-                  navigate('/admin-dashboard', { replace: true });
-                } else {
-                  navigate('/user-dashboard', { replace: true });
-                }
               } catch (err) {
                 console.error('Error en login con Google:', err);
                 alert('Error al iniciar sesión con Google');
