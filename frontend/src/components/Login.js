@@ -5,7 +5,7 @@ import axios from 'axios';
 import { GoogleLogin } from '@react-oauth/google';
 import './Login.css';
 
-// ✅ Usa la variable de entorno (sin la barra final)
+// ✅ Usa la variable de entorno
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const Login = () => {
@@ -14,13 +14,14 @@ const Login = () => {
   const navigate = useNavigate();
 
   // Función auxiliar para construir la URL de manera segura y manejar la respuesta
-  // Elimina la necesidad de repetir ${API_URL}/api/ en cada llamada
+  // Corregida para evitar la duplicación de '/api/'
   const apiPost = async (endpoint, data) => {
-    // 1. Elimina cualquier barra final de API_URL.
-    // 2. Agrega '/api/'.
-    // 3. Agrega el endpoint (ej: 'login/' o 'google-login/').
+    // 1. Limpia cualquier barra final de API_URL.
     const baseURL = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
-    const url = `${baseURL}/api/${endpoint}`;
+
+    // 🛑 CORRECCIÓN CLAVE: NO agregamos '/api/' aquí. 
+    // Asumimos que la baseURL de Render ya trae el '/api' si es necesario.
+    const url = `${baseURL}/${endpoint}`;
 
     try {
       const response = await axios.post(url, data);
@@ -80,7 +81,7 @@ const Login = () => {
     }
 
     try {
-      // ✅ Usa la función corregida, solo pasando el endpoint final
+      // Usa la función corregida, solo pasando el endpoint final
       await apiPost('login/', {
         identifier: cleanIdentifier,
         password: password
@@ -98,7 +99,7 @@ const Login = () => {
 
     window.FB.login((response) => {
       if (response.authResponse) {
-        // ✅ Usa la función corregida
+        // Usa la función corregida
         apiPost('facebook-login/', {
           access_token: response.authResponse.accessToken
         })
@@ -153,7 +154,7 @@ const Login = () => {
           <GoogleLogin
             onSuccess={async (credentialResponse) => {
               try {
-                // ✅ Usa la función corregida
+                // Usa la función corregida
                 await apiPost('google-login/', {
                   token: credentialResponse.credential
                 });
@@ -166,6 +167,7 @@ const Login = () => {
               alert('Error en el login con Google');
             }}
 
+            // No se usa la prop useOneTap, eliminando la advertencia.
             render={({ onClick }) => (
               <button
                 type="button"
