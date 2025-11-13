@@ -19,6 +19,8 @@ from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import date
+from django.utils.http import urljoin
+from django.utils import timezone
 from .models import Route, RoutePoint, Notification, Report, User, RouteDate, RouteSchedule
 from .serializers import RouteSerializer, NotificationSerializer, ReportSerializer, UserSerializer, RouteDateSerializer, RouteScheduleSerializer
 # 👇 NUEVO: Importaciones para PDF
@@ -118,7 +120,7 @@ def change_password(request):
     update_session_auth_hash(request, user)
     return Response({'message': 'Contraseña actualizada correctamente.'})
 
-# 👇 NUEVA VISTA: Recuperación de contraseña
+# 👇 NUEVA VISTA: Recuperación de contraseña — ✅ CORREGIDA
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def forgot_password_view(request):
@@ -133,7 +135,16 @@ def forgot_password_view(request):
 
     uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
-    reset_url = f"http://localhost:3000/reset-password/{uidb64}/{token}/"
+    
+    # ✅ Usa la URL de la petición entrante si existe, sino usa tu dominio
+    host = request.get_host()
+    if 'localhost' in host:
+        base_url = 'http://localhost:3000'
+    else:
+        base_url = 'https://smartcollectorolintepeque.com'  # o 'https://smart-collector.onrender.com'
+    
+    reset_url = f"{base_url}/reset-password/{uidb64}/{token}/"
+    
     subject = "Restablecimiento de contraseña - Smart Collector"
     message = render_to_string('password_reset_email.html', {
         'user': user,
@@ -322,8 +333,8 @@ def generate_reports_view(request):
     if first_report:
         today = date.today()
         days_since_first_report = (today - first_report.fecha.date()).days
-    power_bi_link = "  https://app.powerbi.com/groups/me/reports/TU-REPORT-ID  "
-    pdf_download_url = "/api/admin/reports/generate-pdf/"
+    power_bi_link = "https://app.powerbi.com/groups/me/reports/TU-REPORT-ID"
+    pdf_download_url = f"{request.build_absolute_uri('/api/admin/reports/generate-pdf/')}"
     data = {
         "completed_routes": completed_routes,
         "pending_routes": pending_routes,
