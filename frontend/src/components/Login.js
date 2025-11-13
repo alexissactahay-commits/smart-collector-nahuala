@@ -59,7 +59,8 @@ const Login = () => {
     }
 
     try {
-      await apiPost('api/login/', {
+      // 👇 IMPORTANTE: ya NO ponemos "api/" aquí
+      await apiPost('/login/', {
         identifier: identifier.trim(),
         password,
       });
@@ -104,8 +105,10 @@ const Login = () => {
           </div>
 
           <div className="links" style={{ marginTop: '10px' }}>
-            {/* 👇 NUEVO: enlace para registrarse */}
-            <a onClick={() => navigate('/register')} style={{ fontWeight: 'bold' }}>
+            <a
+              onClick={() => navigate('/register')}
+              style={{ fontWeight: 'bold', cursor: 'pointer' }}
+            >
               ¿No tiene cuenta? Regístrese aquí
             </a>
           </div>
@@ -120,5 +123,4 @@ const Login = () => {
 };
 
 export default Login;
-
 
