@@ -1,173 +1,124 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+from decouple import config
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECRET KEY desde variables de entorno
-SECRET_KEY = os.getenv('SECRET_KEY')
+# ==========================
+# 🔐 SECRET KEY
+# ==========================
+SECRET_KEY = config("SECRET_KEY")
 
-# DEBUG siempre False en Render
-DEBUG = False
+# ==========================
+# 🚀 DEBUG (Render requiere False)
+# ==========================
+DEBUG = config("DEBUG", default=False, cast=bool)
 
-# -----------------------------------------------------------------------------
-# ALLOWED HOSTS
-# -----------------------------------------------------------------------------
+# ==========================
+# 🌐 ALLOWED HOSTS
+# ==========================
 ALLOWED_HOSTS = [
-    'smartcollectorolintepeque.com',
-    'www.smartcollectorolintepeque.com',
-    '.onrender.com',
-    'localhost',
-    '127.0.0.1',
+    "smartcollectorolintepeque.com",
+    "www.smartcollectorolintepeque.com",
+    ".onrender.com"
 ]
 
-# -----------------------------------------------------------------------------
-# APPS
-# -----------------------------------------------------------------------------
+# ==========================
+# 📦 INSTALLED APPS
+# ==========================
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-
-    # Extras
-    'rest_framework',
-    'rest_framework_simplejwt',
-    'corsheaders',
-
-    # Social login
-    'django.contrib.sites',
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
-    'allauth.socialaccount.providers.google',
-    'allauth.socialaccount.providers.facebook',
-
-    # App principal
-    'core',
+    "corsheaders",
+    "django.contrib.sites",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "core"
 ]
 
-SITE_ID = 1
-
-# -----------------------------------------------------------------------------
-# MIDDLEWARE
-# -----------------------------------------------------------------------------
+# ==========================
+# 🔧 MIDDLEWARE
+# ==========================
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'allauth.account.middleware.AccountMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'smart_collector.urls'
+ROOT_URLCONF = "smart_collector.urls"
 
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'core' / 'templates'],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
-]
-
-WSGI_APPLICATION = 'smart_collector.wsgi.application'
-
-# -----------------------------------------------------------------------------
-# DATABASE — USANDO VARIABLES DE ENTORNO DE RENDER
-# -----------------------------------------------------------------------------
+# ==========================
+# 🗃 DATABASE (Render)
+# ==========================
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'),
-        'OPTIONS': {
-            "sslmode": "require",
-        },
-    }
-}
-
-# -----------------------------------------------------------------------------
-# PASSWORD VALIDATION
-# -----------------------------------------------------------------------------
-AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
-]
-
-# -----------------------------------------------------------------------------
-# INTERNATIONALIZATION
-# -----------------------------------------------------------------------------
-LANGUAGE_CODE = 'es-es'
-TIME_ZONE = 'America/Guatemala'
-USE_I18N = True
-USE_TZ = True
-
-# -----------------------------------------------------------------------------
-# STATIC FILES
-# -----------------------------------------------------------------------------
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# -----------------------------------------------------------------------------
-# CORS & CSRF
-# -----------------------------------------------------------------------------
-CSRF_TRUSTED_ORIGINS = [
-    'https://smartcollectorolintepeque.com',
-    'https://www.smartcollectorolintepeque.com',
-    'https://*.onrender.com'
-]
-
-CORS_ALLOWED_ORIGINS = [
-    "https://smartcollectorolintepeque.com",
-    "https://www.smartcollectorolintepeque.com",
-]
-
-CORS_ALLOW_CREDENTIALS = True
-
-# -----------------------------------------------------------------------------
-# DJANGO REST & JWT
-# -----------------------------------------------------------------------------
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    "default": dj_database_url.parse(
+        config("DATABASE_URL"),
+        conn_max_age=600,
+        ssl_require=True
     )
 }
 
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'SIGNING_KEY': SECRET_KEY,
-    'AUTH_HEADER_TYPES': ('Bearer',),
+# ==========================
+# 🌎 CORS
+# ==========================
+CORS_ALLOWED_ORIGINS = [
+    "https://www.smartcollectorolintepeque.com",
+    "https://smartcollectorolintepeque.com"
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://smartcollectorolintepeque.com",
+    "https://www.smartcollectorolintepeque.com",
+    "https://*.onrender.com"
+]
+
+# ==========================
+# 🌐 STATIC FILES
+# ==========================
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# ==========================
+# 🔑 JWT
+# ==========================
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
 }
 
-# -----------------------------------------------------------------------------
-# Google OAuth
-# -----------------------------------------------------------------------------
-GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+}
 
-# -----------------------------------------------------------------------------
-# USER CUSTOM MODEL
-# -----------------------------------------------------------------------------
-AUTH_USER_MODEL = "core.User"
+# ==========================
+# GOOGLE LOGIN
+# ==========================
+GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID")
+
+# AUTO FIELD
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
