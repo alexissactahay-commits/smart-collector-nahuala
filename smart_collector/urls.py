@@ -36,6 +36,7 @@ from core.views import (
     ReportViewSet,
     dashboard_view,
     admin_report_detail_view,
+    home_view,
 )
 
 # Router para ViewSets
@@ -46,6 +47,7 @@ router.register(r'reports', ReportViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', home_view, name='home'),
     path('api/', include(router.urls)),
     
     # Autenticación
