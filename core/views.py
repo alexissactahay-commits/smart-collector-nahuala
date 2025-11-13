@@ -19,7 +19,7 @@ from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import date
-from django.utils.http import urljoin
+from urllib.parse import urljoin
 from django.utils import timezone
 from .models import Route, RoutePoint, Notification, Report, User, RouteDate, RouteSchedule
 from .serializers import RouteSerializer, NotificationSerializer, ReportSerializer, UserSerializer, RouteDateSerializer, RouteScheduleSerializer
