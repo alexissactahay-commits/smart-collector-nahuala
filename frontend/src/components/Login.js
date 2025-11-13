@@ -1,18 +1,17 @@
 // Login.js
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { GoogleLogin } from '@react-oauth/google';
 import './Login.css';
 
-// ✅ Usa la variable de entorno SIN AGREGAR /api tú mismo
+// Usa la variable de entorno SIN AGREGAR /api tú mismo
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-// Función correcta para construir URLs
+// Construcción correcta de URLs
 const buildURL = (endpoint) => {
   const base = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
 
-  // ❗ IMPORTANTE: NO agregamos "api" dos veces
   if (endpoint.startsWith('/')) {
     return `${base}${endpoint}`;
   }
@@ -26,7 +25,7 @@ const Login = () => {
 
   const apiPost = async (endpoint, data) => {
     try {
-      const url = buildURL(endpoint); // ← función nueva usada aquí
+      const url = buildURL(endpoint);
 
       const response = await axios.post(url, data, {
         headers: {
@@ -61,7 +60,7 @@ const Login = () => {
     }
 
     try {
-      await apiPost('api/login/', {
+      await apiPost('/login/', {
         identifier: identifier.trim(),
         password,
       });
@@ -73,7 +72,6 @@ const Login = () => {
   return (
     <div className="login-container">
       <div className="login-box">
-
         <img src="/Log_smar_collector.png" alt="Logo Smart Collector" className="logo" />
 
         <form onSubmit={handleSubmit}>
@@ -110,13 +108,12 @@ const Login = () => {
           {/* Google Login */}
           <GoogleLogin
             onSuccess={async (credentialResponse) => {
-              await apiPost('api/google-login/', {
+              await apiPost('/google-login/', {
                 token: credentialResponse.credential
               });
             }}
             onError={() => alert('Error en login con Google')}
           />
-
         </form>
       </div>
     </div>
@@ -124,4 +121,5 @@ const Login = () => {
 };
 
 export default Login;
+
 
