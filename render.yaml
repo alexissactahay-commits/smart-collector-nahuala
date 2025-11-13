@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: smart-collector-backend
+    env: python
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput
+      python manage.py migrate
+    startCommand: gunicorn smart_collector.wsgi:application
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: smart_collector.settings
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: WEB_CONCURRENCY
+        value: 3
+      - key: DEBUG
+        value: False
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        value: "smartcollectorolintepeque.com,www.smartcollectorolintepeque.com,smart-collector-backend.onrender.com"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smart-collector-db
+          property: connectionString
+
+  - type: web
+    name: smart-collector-frontend
+    env: node
+    buildCommand: |
+      npm install
+      npm run build
+    staticPublishPath: build
+    envVars:
+      - key: REACT_APP_API_URL
+        value: "https://smart-collector-backend.onrender.com"
+
+databases:
+  - name: smart-collector-db
