@@ -5,64 +5,58 @@ import axios from 'axios';
 import { GoogleLogin } from '@react-oauth/google';
 import './Login.css';
 
-// 🔥 URL REAL DE BACKEND EN RENDER
-const API_URL = process.env.REACT_APP_API_URL || 'https://smart-collector.onrender.com/api';
+// 🔥 API BASE URL
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const Login = () => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  // Función auxiliar para POST seguro
+  // 🔥 Función auxiliar para POST a la API
   const apiPost = async (endpoint, data) => {
-    const baseURL = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
 
-    const url = `${baseURL}/${cleanEndpoint}`;
+    // 🔥 Asegurar endpoint final correcto:
+    // TODAS las rutas deben iniciar con /api/
+    const cleanBase = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+
+    const url = `${cleanBase}/api/${endpoint}`;
 
     try {
       const response = await axios.post(url, data);
 
       const { access, role, username } = response.data;
 
-      if (!access || !role) {
-        throw new Error('Respuesta inválida del servidor');
-      }
-
-      const normalizedRole = role.toLowerCase();
       localStorage.setItem('token', access);
-      localStorage.setItem('userRole', normalizedRole);
+      localStorage.setItem('userRole', role.toLowerCase());
       localStorage.setItem('username', username);
 
-      if (normalizedRole === 'admin') {
-        navigate('/admin-dashboard', { replace: true });
+      if (role.toLowerCase() === 'admin') {
+        navigate('/admin-dashboard');
       } else {
-        navigate('/user-dashboard', { replace: true });
+        navigate('/user-dashboard');
       }
     } catch (error) {
-      console.error('Error de API:', error.response?.data || error.message);
+      console.error("🔥 Error API:", error.response?.data || error.message);
       throw error;
     }
   };
 
-  // Inicializar SDK de Facebook
+  // Facebook
   useEffect(() => {
     if (window.FB) return;
-
-    const script = document.createElement('script');
-    script.src = 'https://connect.facebook.net/es_LA/sdk.js';
+    const script = document.createElement("script");
+    script.src = "https://connect.facebook.net/es_LA/sdk.js";
     script.async = true;
     script.defer = true;
-    script.crossOrigin = 'anonymous';
     script.onload = () => {
       window.FB.init({
-        appId: '1930193997909434',
+        appId: "1930193997909434",
         cookie: true,
         xfbml: true,
-        version: 'v20.0'
+        version: "v20.0",
       });
     };
-
     document.head.appendChild(script);
 
     return () => {
@@ -72,41 +66,37 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const cleanIdentifier = identifier.trim();
 
-    if (!cleanIdentifier || !password.trim()) {
-      alert('Por favor, complete todos los campos.');
+    if (!identifier.trim() || !password.trim()) {
+      alert("Complete todos los campos");
       return;
     }
 
     try {
-      await apiPost('login/', {
-        identifier: cleanIdentifier,
-        password: password
+      await apiPost("login/", {
+        identifier: identifier.trim(),
+        password: password.trim(),
       });
-    } catch (error) {
-      alert('Credenciales inválidas. Por favor, intente de nuevo.');
+    } catch {
+      alert("Credenciales inválidas");
     }
   };
 
   const handleFacebookLogin = () => {
     if (!window.FB) {
-      alert('Facebook SDK no está listo. Por favor, recargue la página.');
+      alert("Facebook SDK no está listo.");
       return;
     }
 
     window.FB.login((response) => {
       if (response.authResponse) {
-        apiPost('facebook-login/', {
-          access_token: response.authResponse.accessToken
-        }).catch(err => {
-          console.error('Error en login con Facebook:', err);
-          alert('Error al iniciar sesión con Facebook. Por favor, inténtelo de nuevo.');
+        apiPost("facebook-login/", {
+          access_token: response.authResponse.accessToken,
         });
       } else {
-        alert('Login con Facebook cancelado o fallido.');
+        alert("Login con Facebook falló.");
       }
-    }, { scope: 'public_profile,email' });
+    });
   };
 
   return (
@@ -121,7 +111,7 @@ const Login = () => {
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="Ej: ciudadano@olintepeque.gt o ciudadano"
+              placeholder="Ej: ciudadano@olintepeque.gt"
               required
             />
           </div>
@@ -132,7 +122,7 @@ const Login = () => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="************"
+              placeholder="********"
               required
             />
           </div>
@@ -140,15 +130,7 @@ const Login = () => {
           <button type="submit" className="btn-login">Iniciar Sesión</button>
 
           <div className="links">
-            <a
-              href="#forgot"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate('/forgot-password');
-              }}
-            >
-              Olvidó su Contraseña
-            </a>
+            <a href="/forgot-password">Olvidó su Contraseña</a>
           </div>
 
           <hr />
@@ -156,17 +138,14 @@ const Login = () => {
           <GoogleLogin
             onSuccess={async (credentialResponse) => {
               try {
-                await apiPost('google-login/', {
-                  token: credentialResponse.credential
+                await apiPost("google-login/", {
+                  token: credentialResponse.credential,
                 });
-              } catch (err) {
-                console.error('Error en login con Google:', err);
-                alert('Error al iniciar sesión con Google');
+              } catch {
+                alert("Error con Google");
               }
             }}
-            onError={() => {
-              alert('Error en el login con Google');
-            }}
+            onError={() => alert("Error con Google")}
           />
 
           <button
@@ -174,11 +153,11 @@ const Login = () => {
             className="btn-social facebook"
             onClick={handleFacebookLogin}
           >
-            <span style={{ marginRight: '10px' }}>🔵</span> Iniciar con Facebook
+            Iniciar con Facebook
           </button>
 
           <div className="register-link">
-            Si no posee una cuenta. <a href="/register">Crea una aquí</a>
+            ¿No posee una cuenta? <a href="/register">Crea una aquí</a>
           </div>
         </form>
       </div>
