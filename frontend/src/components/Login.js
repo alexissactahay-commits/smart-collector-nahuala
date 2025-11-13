@@ -7,10 +7,9 @@ import './Login.css';
 // URL BASE DEL BACKEND
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-// Función para construir URLs correctamente
+// Construye rutas correctamente sin duplicar /api
 const buildURL = (endpoint) => {
   const base = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
-
   if (endpoint.startsWith('/')) {
     return `${base}${endpoint}`;
   }
@@ -34,15 +33,27 @@ const Login = () => {
 
       const { access, role, username } = response.data;
 
-      const normalizedRole = role.toLowerCase();
+      // Normalizar rol
+      const normalizedRole = (role || '').toString().trim().toLowerCase();
+
+      // Guardar datos
       localStorage.setItem('token', access);
       localStorage.setItem('userRole', normalizedRole);
       localStorage.setItem('username', username);
 
-      if (normalizedRole === 'admin') {
-        navigate('/admin-dashboard', { replace: true });
-      } else {
-        navigate('/user-dashboard', { replace: true });
+      console.log("ROL RECIBIDO:", normalizedRole);
+
+      // Redirección por rol (super seguro)
+      switch (normalizedRole) {
+        case 'admin':
+          navigate('/admin-dashboard', { replace: true });
+          break;
+
+        case 'recolector':
+        case 'ciudadano':
+        default:
+          navigate('/user-dashboard', { replace: true });
+          break;
       }
     } catch (error) {
       console.error('Error de API:', error.response?.data || error.message);
@@ -59,7 +70,7 @@ const Login = () => {
     }
 
     try {
-      // 👇 IMPORTANTE: ya NO ponemos "api/" aquí
+      // IMPORTANTE: NO agregar "api/" aquí
       await apiPost('/login/', {
         identifier: identifier.trim(),
         password,
@@ -76,6 +87,7 @@ const Login = () => {
         <img src="/Log_smar_collector.png" alt="Logo Smart Collector" className="logo" />
 
         <form onSubmit={handleSubmit}>
+          
           <div className="input-group">
             <label>Correo Electrónico o Usuario</label>
             <input
@@ -115,7 +127,6 @@ const Login = () => {
 
           <hr />
 
-          {/* 🔕 GOOGLE LOGIN DESACTIVADO */}
         </form>
       </div>
     </div>
