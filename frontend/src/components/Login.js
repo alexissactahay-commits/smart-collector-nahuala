@@ -2,9 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { GoogleLogin } from '@react-oauth/google';
 import './Login.css';
 
-const API_URL = 'https://smart-collector.onrender.com'; // ✅ URL de producción
+// ✅ Usa la variable de entorno o Render en producción
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const Login = () => {
   const [identifier, setIdentifier] = useState('');
@@ -34,50 +36,6 @@ const Login = () => {
       document.head.removeChild(script);
     };
   }, []);
-
-  // Inicializa el SDK de Google
-  useEffect(() => {
-    if (window.google) return;
-
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      window.google.accounts.id.initialize({
-        client_id: '954992204322-2ubdebhj8126lk22v2isa1lmjqv4hc1k.apps.googleusercontent.com',
-        callback: async (credentialResponse) => {
-          try {
-            const res = await axios.post(`${API_URL}/api/google-login/`, {
-              token: credentialResponse.credential
-            });
-            const { access, role, username } = res.data;
-            if (!access || !role) {
-              throw new Error('Respuesta inválida del servidor');
-            }
-            const normalizedRole = role.toLowerCase();
-            localStorage.setItem('token', access);
-            localStorage.setItem('userRole', normalizedRole);
-            localStorage.setItem('username', username);
-            
-            if (normalizedRole === 'admin') {
-              navigate('/admin-dashboard', { replace: true });
-            } else {
-              navigate('/user-dashboard', { replace: true });
-            }
-          } catch (err) {
-            console.error('Error en login con Google:', err);
-            alert('Error al iniciar sesión con Google');
-          }
-        }
-      });
-    };
-    document.head.appendChild(script);
-
-    return () => {
-      document.head.removeChild(script);
-    };
-  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -152,14 +110,6 @@ const Login = () => {
     }, { scope: 'public_profile,email' });
   };
 
-  const handleGoogleLogin = () => {
-    if (!window.google) {
-      alert('Google SDK no está listo. Por favor, recargue la página.');
-      return;
-    }
-    window.google.accounts.id.prompt();
-  };
-
   return (
     <div className="login-container">
       <div className="login-box">
@@ -198,13 +148,45 @@ const Login = () => {
             </a>
           </div>
           <hr />
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="btn-social google"
-          >
-            <span style={{ marginRight: '10px' }}>🟢</span> Iniciar con Google
-          </button>
+          <GoogleLogin
+            onSuccess={async (credentialResponse) => {
+              try {
+                const res = await axios.post(`${API_URL}/api/google-login/`, {
+                  token: credentialResponse.credential
+                });
+                const { access, role, username } = res.data;
+                if (!access || !role) {
+                  throw new Error('Respuesta inválida del servidor');
+                }
+                const normalizedRole = role.toLowerCase();
+                localStorage.setItem('token', access);
+                localStorage.setItem('userRole', normalizedRole);
+                localStorage.setItem('username', username);
+                
+                if (normalizedRole === 'admin') {
+                  navigate('/admin-dashboard', { replace: true });
+                } else {
+                  navigate('/user-dashboard', { replace: true });
+                }
+              } catch (err) {
+                console.error('Error en login con Google:', err);
+                alert('Error al iniciar sesión con Google');
+              }
+            }}
+            onError={() => {
+              alert('Error en el login con Google');
+            }}
+            useOneTap={false}
+            render={({ onClick }) => (
+              <button
+                type="button"
+                onClick={onClick}
+                className="btn-social google"
+              >
+                <span style={{ marginRight: '10px' }}>🟢</span> Iniciar con Google
+              </button>
+            )}
+          />
           <button
             type="button"
             className="btn-social facebook"
