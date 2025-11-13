@@ -2,13 +2,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { GoogleLogin } from '@react-oauth/google';
 import './Login.css';
 
-// Usa la variable de entorno SIN AGREGAR /api tú mismo
+// URL BASE DEL BACKEND
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-// Construcción correcta de URLs
+// Función para construir URLs correctamente
 const buildURL = (endpoint) => {
   const base = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
 
@@ -60,7 +59,7 @@ const Login = () => {
     }
 
     try {
-      await apiPost('/login/', {
+      await apiPost('api/login/', {
         identifier: identifier.trim(),
         password,
       });
@@ -72,6 +71,7 @@ const Login = () => {
   return (
     <div className="login-container">
       <div className="login-box">
+
         <img src="/Log_smar_collector.png" alt="Logo Smart Collector" className="logo" />
 
         <form onSubmit={handleSubmit}>
@@ -105,15 +105,8 @@ const Login = () => {
 
           <hr />
 
-          {/* Google Login */}
-          <GoogleLogin
-            onSuccess={async (credentialResponse) => {
-              await apiPost('/google-login/', {
-                token: credentialResponse.credential
-              });
-            }}
-            onError={() => alert('Error en login con Google')}
-          />
+          {/* 🔕 GOOGLE LOGIN DESACTIVADO */}
+          {/* <GoogleLogin ... /> */} 
         </form>
       </div>
     </div>
@@ -121,5 +114,6 @@ const Login = () => {
 };
 
 export default Login;
+
 
 
