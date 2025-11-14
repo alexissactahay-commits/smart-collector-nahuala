@@ -368,6 +368,63 @@ def create_default_vehicle(request):
 
     return Response({'message': 'Vehículo ID 1 creado correctamente.'})
 
+# =============================
+#  REPORTES DE USUARIO (CIUDADANO)
+# =============================
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def my_reports_view(request):
+
+    user = request.user  # Usuario autenticado
+
+    if request.method == 'GET':
+        reports = Report.objects.filter(user=user).order_by('-created_at')
+        serializer = ReportSerializer(reports, many=True)
+        return Response(serializer.data)
+
+    if request.method == 'POST':
+        description = request.data.get('description')
+
+        if not description:
+            return Response({'error': 'El campo description es requerido.'}, status=400)
+
+        report = Report.objects.create(
+            user=user,
+            description=description,
+            status='pending'
+        )
+
+        serializer = ReportSerializer(report)
+        return Response(serializer.data, status=201)
+    
+    # =============================
+#  REPORTES DE USUARIO (CIUDADANO)
+# =============================
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def my_reports_view(request):
+
+    user = request.user  # Usuario autenticado
+
+    if request.method == 'GET':
+        reports = Report.objects.filter(user=user).order_by('-created_at')
+        serializer = ReportSerializer(reports, many=True)
+        return Response(serializer.data)
+
+    if request.method == 'POST':
+        description = request.data.get('description')
+
+        if not description:
+            return Response({'error': 'El campo description es requerido.'}, status=400)
+
+        report = Report.objects.create(
+            user=user,
+            description=description,
+            status='pending'
+        )
+
+        serializer = ReportSerializer(report)
+        return Response(serializer.data, status=201)
 
 
 # =====================
