@@ -4,17 +4,20 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Login.css';
 
-// URL BASE DEL BACKEND
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+// ===============================================
+// 🔥 URL BASE DEL BACKEND (Render + Local)
+// ===============================================
+const API_URL =
+  process.env.REACT_APP_API_URL?.replace(/\/$/, '') ||
+  'http://localhost:8000';
 
-// Función para construir URLs correctamente
-const buildURL = (endpoint) => {
-  const base = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
-
-  if (endpoint.startsWith('/')) {
-    return `${base}${endpoint}`;
+// Fuerza siempre el prefijo /api
+const api = (endpoint) => {
+  endpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  if (!endpoint.startsWith('/api/')) {
+    endpoint = '/api' + endpoint;
   }
-  return `${base}/${endpoint}`;
+  return `${API_URL}${endpoint}`;
 };
 
 const Login = () => {
@@ -22,40 +25,9 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const apiPost = async (endpoint, data) => {
-    try {
-      const url = buildURL(endpoint);
-
-      const response = await axios.post(url, data, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const { access, role, username } = response.data;
-
-      const normalizedRole = role.toLowerCase();
-
-      // Guardar datos en localStorage
-      localStorage.setItem('token', access);
-      localStorage.setItem('userRole', normalizedRole);
-      localStorage.setItem('username', username);
-
-      // 🔥 REDIRECCIÓN SEGÚN ROL
-      if (normalizedRole === 'admin') {
-        navigate('/admin-dashboard', { replace: true });
-      } else if (normalizedRole === 'recolector') {
-        navigate('/recolector-dashboard', { replace: true });
-      } else {
-        navigate('/user-dashboard', { replace: true });
-      }
-
-    } catch (error) {
-      console.error('Error de API:', error.response?.data || error.message);
-      throw error;
-    }
-  };
-
+  // ===============================================
+  // 🔥 PETICIÓN LOGIN
+  // ===============================================
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -65,20 +37,58 @@ const Login = () => {
     }
 
     try {
-      await apiPost('/login/', {
-        identifier: identifier.trim(),
-        password,
-      });
+      const response = await axios.post(
+        api('/login/'),
+        {
+          identifier: identifier.trim(),
+          password: password.trim(),
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+
+      const { access, role, username } = response.data;
+
+      // Normalizar rol
+      const userRole = role.toLowerCase();
+
+      // Guardar credenciales
+      localStorage.setItem('token', access);
+      localStorage.setItem('userRole', userRole);
+      localStorage.setItem('username', username);
+
+      // ===============================================
+      // 🔥 REDIRECCIÓN SEGÚN ROL
+      // ===============================================
+      if (userRole === 'admin') {
+        navigate('/admin-dashboard', { replace: true });
+      } else if (userRole === 'recolector') {
+        navigate('/recolector-dashboard', { replace: true });
+      } else {
+        navigate('/user-dashboard', { replace: true });
+      }
     } catch (error) {
-      alert('Credenciales inválidas.');
+      console.error('LOGIN ERROR:', error.response?.data || error);
+
+      if (error.response?.status === 401) {
+        alert('Credenciales inválidas.');
+      } else if (error.response?.status === 500) {
+        alert('Error interno del servidor. Inténtalo nuevamente.');
+      } else {
+        alert('No se pudo conectar al servidor.');
+      }
     }
   };
 
   return (
     <div className="login-container">
       <div className="login-box">
-
-        <img src="/Log_smar_collector.png" alt="Logo Smart Collector" className="logo" />
+        <img
+          src="/Log_smar_collector.png"
+          alt="Logo Smart Collector"
+          className="logo"
+        />
 
         <form onSubmit={handleSubmit}>
           <div className="input-group">
@@ -87,7 +97,7 @@ const Login = () => {
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="Ej: ciudadano"
+              placeholder="Ej: admin"
               required
             />
           </div>
@@ -103,10 +113,14 @@ const Login = () => {
             />
           </div>
 
-          <button type="submit" className="btn-login">Iniciar Sesión</button>
+          <button type="submit" className="btn-login">
+            Iniciar Sesión
+          </button>
 
           <div className="links">
-            <a onClick={() => navigate('/forgot-password')}>Olvidó su contraseña</a>
+            <a onClick={() => navigate('/forgot-password')}>
+              Olvidó su contraseña
+            </a>
           </div>
 
           <div className="links" style={{ marginTop: '10px' }}>
@@ -119,9 +133,6 @@ const Login = () => {
           </div>
 
           <hr />
-
-          {/* 🔕 GOOGLE LOGIN DESACTIVADO */}
-
         </form>
       </div>
     </div>
@@ -129,6 +140,7 @@ const Login = () => {
 };
 
 export default Login;
+
 
 
 
