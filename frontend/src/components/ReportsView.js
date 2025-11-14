@@ -4,89 +4,79 @@ import './ReportsView.css';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+const API_URL = process.env.REACT_APP_API_URL; // 👈 PRODUCCIÓN / LOCAL
+
 const ReportsView = () => {
   const navigate = useNavigate();
   const [detalle, setDetalle] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [reports, setReports] = useState([]); // 👈 Nuevo: para mostrar reportes enviados
-  const [loadingReports, setLoadingReports] = useState(true); // 👈 Nuevo: estado de carga
+  const [reports, setReports] = useState([]);
+  const [loadingReports, setLoadingReports] = useState(true);
 
-  // Validar autenticación al montar
+  // Validar token
   useEffect(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('userRole');
+
     if (!token || role !== 'ciudadano') {
       navigate('/login', { replace: true });
     }
   }, [navigate]);
 
-  // Cargar reportes enviados al montar
+  // Axios config
+  const api = axios.create({
+    baseURL: API_URL,
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  // Cargar reportes enviados
+  const fetchReports = async () => {
+    try {
+      const res = await api.get('/my-reports/');
+      setReports(res.data);
+    } catch (error) {
+      console.error('Error al cargar reportes:', error);
+    } finally {
+      setLoadingReports(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Token no encontrado');
-        }
-        const res = await axios.get('http://localhost:8000/api/my-reports/', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setReports(res.data);
-      } catch (error) {
-        console.error('Error al cargar reportes:', error);
-      } finally {
-        setLoadingReports(false);
-      }
-    };
     fetchReports();
   }, []);
 
+  // Enviar reporte
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!detalle.trim()) {
       alert('Por favor, ingresa una descripción.');
       return;
     }
 
     setIsSubmitting(true);
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Token no encontrado');
-      }
 
-      await axios.post(
-        'http://localhost:8000/api/my-reports/',
-        {
-          detalle: detalle.trim(),
-          tipo: 'incidencias'
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
+    try {
+      await api.post('/my-reports/', {
+        description: detalle.trim() // 👈 Nombre correcto según el backend
+      });
 
       setSubmitSuccess(true);
       setDetalle('');
-      // Recargar la lista de reportes después de enviar
-      const res = await axios.get('http://localhost:8000/api/my-reports/', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setReports(res.data);
+      fetchReports(); // Recargar lista
     } catch (error) {
-      console.error('Error al enviar el reporte:', error.response?.data || error.message);
+      console.error('Error al enviar el reporte:', error);
 
       if (error.response?.status === 401) {
-        // Token inválido o expirado → limpiar y redirigir
-        localStorage.removeItem('token');
-        localStorage.removeItem('userRole');
-        alert('Tu sesión expiró. Por favor, inicia sesión nuevamente.');
+        localStorage.clear();
+        alert('Tu sesión expiró. Por favor inicia sesión nuevamente.');
         navigate('/login');
       } else {
-        alert('Error al enviar el reporte. Por favor, inténtalo de nuevo.');
+        alert('Error al enviar el reporte. Inténtalo de nuevo.');
       }
     } finally {
       setIsSubmitting(false);
@@ -96,6 +86,7 @@ const ReportsView = () => {
   return (
     <div className="reports-container">
       <h2>Reportar Incidencia - Smart Collector</h2>
+
       {!submitSuccess ? (
         <form className="report-form" onSubmit={handleSubmit}>
           <div className="form-group">
@@ -103,7 +94,7 @@ const ReportsView = () => {
             <textarea
               value={detalle}
               onChange={(e) => setDetalle(e.target.value)}
-              placeholder="Ej: Basura acumulada en la esquina de 5a calle y 3a avenida"
+              placeholder="Ej: Basura acumulada cerca de mi casa"
               required
             />
           </div>
@@ -114,14 +105,14 @@ const ReportsView = () => {
       ) : (
         <div className="success-message">
           <h3>¡Informe Enviado!</h3>
-          <p>Gracias por tu informe. Un administrador revisará tu incidencia y te responderá lo antes posible.</p>
-          <p><strong>Tiempo estimado de respuesta:</strong> 24-48 horas.</p>
+          <p>Gracias por tu informe. Un administrador lo revisará pronto.</p>
         </div>
       )}
 
-      {/* Sección de reportes enviados */}
+      {/* HISTORIAL */}
       <div className="reports-history">
         <h3>Mis Reportes Enviados</h3>
+
         {loadingReports ? (
           <p>Cargando reportes...</p>
         ) : reports.length === 0 ? (
@@ -130,12 +121,15 @@ const ReportsView = () => {
           <div className="reports-list">
             {reports.map(report => (
               <div key={report.id} className={`report-card status-${report.status}`}>
-                <p><strong>Descripción:</strong> {report.detalle}</p>
-                <p><strong>Fecha:</strong> {new Date(report.fecha).toLocaleString()}</p>
-                <p><strong>Estado:</strong> 
+                <p><strong>Descripción:</strong> {report.description}</p>
+                <p><strong>Fecha:</strong> {new Date(report.created_at).toLocaleString()}</p>
+                <p><strong>Estado:</strong>
                   <span className={`status-label status-${report.status}`}>
-                    {report.status === 'pending' ? 'Pendiente' :
-                     report.status === 'resolved' ? 'Resuelto' : 'No resuelto'}
+                    {report.status === 'pending'
+                      ? 'Pendiente'
+                      : report.status === 'resolved'
+                      ? 'Resuelto'
+                      : 'No resuelto'}
                   </span>
                 </p>
               </div>
@@ -143,6 +137,7 @@ const ReportsView = () => {
           </div>
         )}
       </div>
+
     </div>
   );
 };
