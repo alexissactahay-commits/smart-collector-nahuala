@@ -175,3 +175,4 @@ GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID")
 # =======================================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Force Render to rebuild migrations
