@@ -3,7 +3,15 @@ import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import "react-toastify/dist/ReactToastify.css";
 
-// Hook para cargar Google Maps correctamente
+// ========= UTILIDAD PARA EVITAR RUTAS DOBLES =========
+const API = process.env.REACT_APP_API_URL || "http://localhost:8000/api";
+
+const buildURL = (endpoint) => {
+  if (!endpoint.startsWith("/")) endpoint = "/" + endpoint;
+  return API.replace(/\/+$/, "") + endpoint;
+};
+
+// ========= HOOK GOOGLE MAPS =========
 const useGoogleMaps = (apiKey) => {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [error, setError] = useState(null);
@@ -87,12 +95,9 @@ const MapView = () => {
       try {
         const token = localStorage.getItem("token");
 
-        const res = await axios.get(
-          `${process.env.REACT_APP_API_URL}/my-routes/`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const res = await axios.get(buildURL("/my-routes/"), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         setRoutes(res.data);
 
@@ -138,22 +143,17 @@ const MapView = () => {
       try {
         const token = localStorage.getItem("token");
 
-        const res = await axios.get(
-          `${process.env.REACT_APP_API_URL}/vehicle/1/`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const res = await axios.get(buildURL("/vehicles/1/"), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         const newVehicle = res.data;
-
         setVehicle(newVehicle);
 
         marker.setPosition({
           lat: parseFloat(newVehicle.latitude),
           lng: parseFloat(newVehicle.longitude),
         });
-
       } catch (err) {
         console.error("Error obteniendo ubicación del camión:", err);
       }
