@@ -1,5 +1,5 @@
 // Login.js
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Login.css';
@@ -21,43 +21,37 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  // 🧹 Limpia tokens viejos al abrir la página
-  useEffect(() => {
+  const apiPost = async (endpoint, data) => {
+    // Limpia tokens viejos ANTES de cada login
     localStorage.removeItem('token');
     localStorage.removeItem('userRole');
     localStorage.removeItem('username');
-  }, []);
 
-  const apiPost = async (endpoint, data) => {
     try {
       const url = buildURL(endpoint);
 
       const response = await axios.post(url, data, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
 
       const { access, role, username } = response.data;
 
-      // Normalizar rol
-      const normalizedRole = (role || '')
-        .toString()
-        .trim()
-        .toLowerCase();
+      const normalizedRole = (role || '').toString().trim().toLowerCase();
 
-      // Guardar datos
+      // Guardar nuevos tokens
       localStorage.setItem('token', access);
       localStorage.setItem('userRole', normalizedRole);
       localStorage.setItem('username', username);
 
       console.log("ROL RECIBIDO:", normalizedRole);
 
-      // Redirección por rol (super seguro)
-      if (normalizedRole === 'admin') {
-        navigate('/admin-dashboard', { replace: true });
-      } else {
-        navigate('/user-dashboard', { replace: true });
+      switch (normalizedRole) {
+        case 'admin':
+          navigate('/admin-dashboard', { replace: true });
+          break;
+        default:
+          navigate('/user-dashboard', { replace: true });
+          break;
       }
 
     } catch (error) {
@@ -69,19 +63,14 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // 🧹 Borra antes de loguear para evitar tokens viejos
-    localStorage.removeItem('token');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('username');
-
     if (!identifier.trim() || !password.trim()) {
       alert('Por favor llene todos los campos.');
       return;
     }
 
     try {
-      // NO agregar "api/" aquí
-      await apiPost('/login/', {
+      // 👇 IMPORTANTE: ahora SI lleva /api/login/
+      await apiPost('/api/login/', {
         identifier: identifier.trim(),
         password,
       });
@@ -93,11 +82,9 @@ const Login = () => {
   return (
     <div className="login-container">
       <div className="login-box">
-
         <img src="/Log_smar_collector.png" alt="Logo Smart Collector" className="logo" />
 
         <form onSubmit={handleSubmit}>
-
           <div className="input-group">
             <label>Correo Electrónico o Usuario</label>
             <input
@@ -136,7 +123,6 @@ const Login = () => {
           </div>
 
           <hr />
-
         </form>
       </div>
     </div>
