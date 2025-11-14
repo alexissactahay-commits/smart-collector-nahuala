@@ -6,7 +6,7 @@ services:
       pip install -r requirements.txt
       python manage.py collectstatic --noinput
       python manage.py migrate
-    startCommand: gunicorn smart_collector.wsgi:application
+    startCommand: python manage.py create_default_vehicle && gunicorn smart_collector.wsgi:application
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: smart_collector.settings
@@ -34,7 +34,7 @@ services:
     staticPublishPath: build
     envVars:
       - key: REACT_APP_API_URL
-        value: "https://smart-collector-backend.onrender.com"
+        value: "https://smart-collector-backend.onrender.com/api"
 
 databases:
   - name: smart-collector-db
