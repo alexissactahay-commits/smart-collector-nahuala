@@ -1,0 +1,28 @@
+.tracker-container {
+  max-width: 400px;
+  margin: 40px auto;
+  text-align: center;
+  background: #fff;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 0 8px #ccc;
+}
+
+.btn-send {
+  background: #2c7e25;
+  color: white;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.btn-send:disabled {
+  background: gray;
+}
+
+.status-text {
+  margin-top: 15px;
+  font-weight: bold;
+}

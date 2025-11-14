@@ -1,0 +1,59 @@
+.recolector-dashboard {
+  max-width: 440px;
+  margin: 40px auto;
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0px 0px 10px rgba(0,0,0,0.15);
+}
+
+.logo {
+  width: 130px;
+  margin-bottom: 10px;
+}
+
+.btn-option {
+  width: 100%;
+  padding: 15px;
+  margin-top: 15px;
+  background: #28a745;
+  color: white;
+  font-size: 18px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+.btn-option:hover {
+  background: #218838;
+}
+
+.btn-option-secondary {
+  width: 100%;
+  padding: 15px;
+  margin-top: 10px;
+  background: #007bff;
+  color: white;
+  font-size: 18px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+.btn-option-secondary:hover {
+  background: #0069d9;
+}
+
+.btn-logout {
+  width: 100%;
+  padding: 14px;
+  margin-top: 20px;
+  background: #dc3545;
+  color: white;
+  font-size: 17px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+.btn-logout:hover {
+  background: #c82333;
+}

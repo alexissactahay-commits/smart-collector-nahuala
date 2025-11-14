@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
 import Welcome from './components/Welcome';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -21,12 +22,20 @@ import AddSchedule from './components/AddSchedule';
 import GenerateReports from './components/GenerateReports';
 import ForgotPassword from './components/ForgotPassword';
 
+// 🔥 Nuevos imports para recolector
+import RecolectorDashboard from './components/RecolectorDashboard';
+import RecolectorTracker from './components/RecolectorTracker';
+
 const isAuthenticated = () => {
   return localStorage.getItem('token') !== null;
 };
 
 const isAdmin = () => {
   return localStorage.getItem('userRole') === 'admin';
+};
+
+const isRecolector = () => {
+  return localStorage.getItem('userRole') === 'recolector';
 };
 
 function App() {
@@ -47,33 +56,45 @@ function App() {
         {/* Ruta Protegida: User Dashboard */}
         <Route 
           path="/user-dashboard" 
-          element={isAuthenticated() && !isAdmin() ? <UserDashboard /> : <Navigate to="/login" />} 
+          element={isAuthenticated() && !isAdmin() && !isRecolector() ? <UserDashboard /> : <Navigate to="/login" />} 
+        />
+
+        {/* 🔥 Ruta Protegida: Dashboard Recolector */}
+        <Route 
+          path="/recolector-dashboard" 
+          element={isAuthenticated() && isRecolector() ? <RecolectorDashboard /> : <Navigate to="/login" />} 
+        />
+
+        {/* 🔥 Vista para enviar ubicación */}
+        <Route 
+          path="/recolector-tracker" 
+          element={isAuthenticated() && isRecolector() ? <RecolectorTracker /> : <Navigate to="/login" />} 
         />
 
         {/* Rutas Protegidas de Ciudadano */}
         <Route 
           path="/map" 
-          element={isAuthenticated() && !isAdmin() ? <MapView /> : <Navigate to="/login" />} 
+          element={isAuthenticated() && !isAdmin() && !isRecolector() ? <MapView /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/calendar" 
-          element={isAuthenticated() && !isAdmin() ? <CalendarView /> : <Navigate to="/login" />} 
+          element={isAuthenticated() && !isAdmin() && !isRecolector() ? <CalendarView /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/hours" 
-          element={isAuthenticated() && !isAdmin() ? <HoursView /> : <Navigate to="/login" />} 
+          element={isAuthenticated() && !isAdmin() && !isRecolector() ? <HoursView /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/reports" 
-          element={isAuthenticated() && !isAdmin() ? <ReportsView /> : <Navigate to="/login" />} 
+          element={isAuthenticated() && !isAdmin() && !isRecolector() ? <ReportsView /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/messages" 
-          element={isAuthenticated() && !isAdmin() ? <MessagesView /> : <Navigate to="/login" />} 
+          element={isAuthenticated() && !isAdmin() && !isRecolector() ? <MessagesView /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/contact" 
-          element={isAuthenticated() && !isAdmin() ? <ContactView /> : <Navigate to="/login" />} 
+          element={isAuthenticated() && !isAdmin() && !isRecolector() ? <ContactView /> : <Navigate to="/login" />} 
         />
 
         {/* Rutas Protegidas de Administrador */}
@@ -109,9 +130,11 @@ function App() {
         {/* Ruta catch-all */}
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
+
       <ToastContainer position="top-right" autoClose={5000} />
     </Router>
   );
 }
 
 export default App;
+

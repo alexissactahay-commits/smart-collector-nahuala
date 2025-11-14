@@ -18,6 +18,7 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
 
+
 class Route(models.Model):
     DIA_SEMANA = (
         ('Lunes', 'Lunes'),
@@ -43,6 +44,7 @@ class Route(models.Model):
     def __str__(self):
         return f"{self.name} - {self.day_of_week} ({self.start_time} - {self.end_time})"
 
+
 class RoutePoint(models.Model):
     route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name='points')
     latitude = models.DecimalField(max_digits=9, decimal_places=6, verbose_name="Latitud")
@@ -56,6 +58,7 @@ class RoutePoint(models.Model):
 
     def __str__(self):
         return f"Punto {self.order} de {self.route.name}"
+
 
 class Notification(models.Model):
     ESTADOS = (
@@ -71,6 +74,7 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Notificación para {self.usuario.username}: {self.message}"
+
 
 class Report(models.Model):
     TIPOS = (
@@ -105,6 +109,7 @@ class Report(models.Model):
     def __str__(self):
         return f"Reporte de {self.get_tipo_display()} por {self.user.username}"
 
+
 # 👇 NUEVOS MODELOS: Fechas y Horarios de Rutas
 class RouteDate(models.Model):
     route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name='dates')
@@ -119,6 +124,7 @@ class RouteDate(models.Model):
     def __str__(self):
         return f"{self.route.name} - {self.date}"
 
+
 class RouteSchedule(models.Model):
     route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name='schedules')
     start_time = models.TimeField(verbose_name="Hora de inicio")
@@ -131,3 +137,30 @@ class RouteSchedule(models.Model):
 
     def __str__(self):
         return f"{self.route.name} - {self.start_time} a {self.end_time}"
+
+
+# 👇 NUEVO MODELO: Vehículo (ubicación en tiempo real del camión recolector)
+class Vehicle(models.Model):
+    name = models.CharField(
+        max_length=100,
+        default="Camión recolector",
+        verbose_name="Nombre del vehículo"
+    )
+    latitude = models.FloatField(default=0, verbose_name="Latitud")
+    longitude = models.FloatField(default=0, verbose_name="Longitud")
+    last_update = models.DateTimeField(auto_now=True, verbose_name="Última actualización")
+    route = models.ForeignKey(
+        Route,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="vehicles",
+        verbose_name="Ruta asignada"
+    )
+
+    class Meta:
+        verbose_name = "Vehículo"
+        verbose_name_plural = "Vehículos"
+
+    def __str__(self):
+        return f"{self.name} (lat={self.latitude}, lng={self.longitude})"

@@ -35,15 +35,21 @@ const Login = () => {
       const { access, role, username } = response.data;
 
       const normalizedRole = role.toLowerCase();
+
+      // Guardar datos en localStorage
       localStorage.setItem('token', access);
       localStorage.setItem('userRole', normalizedRole);
       localStorage.setItem('username', username);
 
+      // 🔥 REDIRECCIÓN SEGÚN ROL
       if (normalizedRole === 'admin') {
         navigate('/admin-dashboard', { replace: true });
+      } else if (normalizedRole === 'recolector') {
+        navigate('/recolector-dashboard', { replace: true });
       } else {
         navigate('/user-dashboard', { replace: true });
       }
+
     } catch (error) {
       console.error('Error de API:', error.response?.data || error.message);
       throw error;
@@ -59,7 +65,6 @@ const Login = () => {
     }
 
     try {
-      // 👇 IMPORTANTE: ya NO ponemos "api/" aquí
       await apiPost('/login/', {
         identifier: identifier.trim(),
         password,
@@ -116,6 +121,7 @@ const Login = () => {
           <hr />
 
           {/* 🔕 GOOGLE LOGIN DESACTIVADO */}
+
         </form>
       </div>
     </div>
@@ -123,6 +129,7 @@ const Login = () => {
 };
 
 export default Login;
+
 
 
 
