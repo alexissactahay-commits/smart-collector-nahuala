@@ -4,19 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Login.css';
 
-// 🚨 IMPORTANTE:
-// En Vercel tu variable DEBE ser así:
-// REACT_APP_API_URL = https://smart-collector.onrender.com
-// (SIN /api al final)
+// URL BASE DEL BACKEND
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
-
-// Construye bien la URL sin duplicar /api
+// Función para construir URLs correctamente
 const buildURL = (endpoint) => {
-  const base = API_URL.endsWith("/") ? API_URL.slice(0, -1) : API_URL;
+  const base = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
 
-  if (endpoint.startsWith("/")) {
-    return `${base}${endpoint}`; 
+  if (endpoint.startsWith('/')) {
+    return `${base}${endpoint}`;
   }
   return `${base}/${endpoint}`;
 };
@@ -26,52 +22,50 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = async () => {
-    const url = buildURL("/api/login/"); // 👈 AQUÍ SE ARREGLA TODO
+  const apiPost = async (endpoint, data) => {
+    try {
+      const url = buildURL(endpoint);
 
-    const response = await axios.post(
-      url,
-      {
-        identifier: identifier.trim(),
-        password: password.trim(),
-      },
-      {
-        headers: { "Content-Type": "application/json" },
+      const response = await axios.post(url, data, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const { access, role, username } = response.data;
+
+      const normalizedRole = role.toLowerCase();
+      localStorage.setItem('token', access);
+      localStorage.setItem('userRole', normalizedRole);
+      localStorage.setItem('username', username);
+
+      if (normalizedRole === 'admin') {
+        navigate('/admin-dashboard', { replace: true });
+      } else {
+        navigate('/user-dashboard', { replace: true });
       }
-    );
-
-    const { access, role, username } = response.data;
-
-    const normalizedRole = role.toLowerCase();
-
-    // Guardar sesión
-    localStorage.setItem("token", access);
-    localStorage.setItem("userRole", normalizedRole);
-    localStorage.setItem("username", username);
-
-    // Redirect por rol
-    if (normalizedRole === "admin") {
-      navigate("/admin-dashboard", { replace: true });
-    } else if (normalizedRole === "recolector") {
-      navigate("/recolector-dashboard", { replace: true });
-    } else {
-      navigate("/user-dashboard", { replace: true });
+    } catch (error) {
+      console.error('Error de API:', error.response?.data || error.message);
+      throw error;
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!identifier || !password) {
-      alert("Complete todos los campos.");
+    if (!identifier.trim() || !password.trim()) {
+      alert('Por favor llene todos los campos.');
       return;
     }
 
     try {
-      await handleLogin();
+      // 👇 IMPORTANTE: ya NO ponemos "api/" aquí
+      await apiPost('/login/', {
+        identifier: identifier.trim(),
+        password,
+      });
     } catch (error) {
-      console.error("Error en login:", error.response?.data || error.message);
-      alert("Credenciales inválidas.");
+      alert('Credenciales inválidas.');
     }
   };
 
@@ -82,14 +76,13 @@ const Login = () => {
         <img src="/Log_smar_collector.png" alt="Logo Smart Collector" className="logo" />
 
         <form onSubmit={handleSubmit}>
-
           <div className="input-group">
             <label>Correo Electrónico o Usuario</label>
             <input
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="Ej: admin, ciudadano, recolector"
+              placeholder="Ej: ciudadano"
               required
             />
           </div>
@@ -105,9 +98,7 @@ const Login = () => {
             />
           </div>
 
-          <button type="submit" className="btn-login">
-            Iniciar Sesión
-          </button>
+          <button type="submit" className="btn-login">Iniciar Sesión</button>
 
           <div className="links">
             <a onClick={() => navigate('/forgot-password')}>Olvidó su contraseña</a>
@@ -124,6 +115,7 @@ const Login = () => {
 
           <hr />
 
+          {/* 🔕 GOOGLE LOGIN DESACTIVADO */}
         </form>
       </div>
     </div>
