@@ -12,6 +12,7 @@ from core.views import (
 
     # Ciudadanos
     my_routes_view,
+    my_reports_view,              # 👈 AGREGADO
 
     # Admin
     admin_users_view,
@@ -30,7 +31,7 @@ from core.views import (
 
     create_default_vehicle,
 
-    # NUEVO 👉 subir foto de perfil
+    # Subir foto de perfil
     upload_profile_picture,
 )
 
@@ -56,6 +57,7 @@ urlpatterns = [
     #   CIUDADANO
     # ======================
     path('api/my-routes/', my_routes_view),
+    path('api/my-reports/', my_reports_view),     # 👈 RUTA QUE FALTABA
 
     # ======================
     #     ADMIN
@@ -86,7 +88,3 @@ urlpatterns = [
 # ========================================
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-
-
-
