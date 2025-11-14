@@ -7,9 +7,10 @@ import './Login.css';
 // URL BASE DEL BACKEND
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-// Construye rutas correctamente sin duplicar /api
+// Función para construir URLs correctamente
 const buildURL = (endpoint) => {
   const base = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+
   if (endpoint.startsWith('/')) {
     return `${base}${endpoint}`;
   }
@@ -22,38 +23,27 @@ const Login = () => {
   const navigate = useNavigate();
 
   const apiPost = async (endpoint, data) => {
-    // Limpia tokens viejos ANTES de cada login
-    localStorage.removeItem('token');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('username');
-
     try {
       const url = buildURL(endpoint);
 
       const response = await axios.post(url, data, {
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       const { access, role, username } = response.data;
 
-      const normalizedRole = (role || '').toString().trim().toLowerCase();
-
-      // Guardar nuevos tokens
+      const normalizedRole = role.toLowerCase();
       localStorage.setItem('token', access);
       localStorage.setItem('userRole', normalizedRole);
       localStorage.setItem('username', username);
 
-      console.log("ROL RECIBIDO:", normalizedRole);
-
-      switch (normalizedRole) {
-        case 'admin':
-          navigate('/admin-dashboard', { replace: true });
-          break;
-        default:
-          navigate('/user-dashboard', { replace: true });
-          break;
+      if (normalizedRole === 'admin') {
+        navigate('/admin-dashboard', { replace: true });
+      } else {
+        navigate('/user-dashboard', { replace: true });
       }
-
     } catch (error) {
       console.error('Error de API:', error.response?.data || error.message);
       throw error;
@@ -69,8 +59,8 @@ const Login = () => {
     }
 
     try {
-      // 👇 IMPORTANTE: ahora SI lleva /api/login/
-      await apiPost('/api/login/', {
+      // 👇 IMPORTANTE: ya NO ponemos "api/" aquí
+      await apiPost('/login/', {
         identifier: identifier.trim(),
         password,
       });
@@ -82,6 +72,7 @@ const Login = () => {
   return (
     <div className="login-container">
       <div className="login-box">
+
         <img src="/Log_smar_collector.png" alt="Logo Smart Collector" className="logo" />
 
         <form onSubmit={handleSubmit}>
@@ -123,6 +114,8 @@ const Login = () => {
           </div>
 
           <hr />
+
+          {/* 🔕 GOOGLE LOGIN DESACTIVADO */}
         </form>
       </div>
     </div>
@@ -130,5 +123,6 @@ const Login = () => {
 };
 
 export default Login;
+
 
 
