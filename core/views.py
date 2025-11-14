@@ -11,16 +11,15 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
-from rest_framework import viewsets, permissions
 from rest_framework.response import Response
 from django.contrib.auth import update_session_auth_hash
-from google.auth import exceptions
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from rest_framework_simplejwt.tokens import RefreshToken
-from datetime import date
-from urllib.parse import urljoin
 from django.utils import timezone
+
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 # MODELOS
 from .models import (
@@ -35,16 +34,10 @@ from .serializers import (
     VehicleSerializer
 )
 
-# PDF
-from io import BytesIO
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.units import inch
 
-
-# =======================
-#    LOGIN Y REGISTRO
-# =======================
+# ====================================
+#   LOGIN Y REGISTRO
+# ====================================
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -103,7 +96,7 @@ def register_view(request):
         return Response({'error': 'Todos los campos son obligatorios.'}, status=400)
 
     if User.objects.filter(email=email).exists():
-        return Response({'error': 'El correo electrónico ya está registrado.'}, status=400)
+        return Response({'error': 'El correo ya está registrado.'}, status=400)
 
     user = User.objects.create_user(
         username=username,
@@ -117,13 +110,7 @@ def register_view(request):
         user.is_superuser = True
         user.save()
 
-    return Response({
-        'message': 'Usuario registrado correctamente.',
-        'user_id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'role': user.role
-    }, status=201)
+    return Response({'message': 'Usuario registrado correctamente.'}, status=201)
 
 
 @api_view(['POST'])
@@ -134,24 +121,25 @@ def change_password(request):
     new_password = request.data.get('new_password')
 
     if not user.check_password(old_password):
-        return Response({'error': 'La contraseña actual es incorrecta.'}, status=400)
+        return Response({'error': 'Contraseña actual incorrecta.'}, status=400)
 
     user.set_password(new_password)
     user.save()
     update_session_auth_hash(request, user)
+
     return Response({'message': 'Contraseña actualizada correctamente.'})
 
 
-# =======================
+# ====================================
 #   RECUPERAR CONTRASEÑA
-# =======================
+# ====================================
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def forgot_password_view(request):
     email = request.data.get('email')
     if not email:
-        return Response({'error': 'El correo electrónico es obligatorio.'}, status=400)
+        return Response({'error': 'El correo es obligatorio.'}, status=400)
 
     try:
         user = User.objects.get(email__iexact=email)
@@ -162,44 +150,36 @@ def forgot_password_view(request):
     token = default_token_generator.make_token(user)
 
     host = request.get_host()
-    if 'localhost' in host:
-        base_url = 'http://localhost:3000'
-    else:
-        base_url = 'https://smartcollectorolintepeque.com'
+    base_url = (
+        'https://smartcollectorolintepeque.com'
+        if 'localhost' not in host
+        else 'http://localhost:3000'
+    )
 
     reset_url = f"{base_url}/reset-password/{uidb64}/{token}/"
 
     subject = "Restablecimiento de contraseña - Smart Collector"
-    message = render_to_string('password_reset_email.html', {
-        'user': user,
-        'reset_url': reset_url,
-    })
-    send_mail(
-        subject,
-        message,
-        settings.DEFAULT_FROM_EMAIL,
-        [user.email],
-        fail_silently=False,
-    )
+    message = render_to_string('password_reset_email.html', {'user': user, 'reset_url': reset_url})
+
+    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+
     return Response({'message': 'Si el correo existe, recibirás instrucciones.'})
 
 
-# =======================
+# ====================================
 #   GOOGLE LOGIN
-# =======================
-
-from google.auth import exceptions
-from google.auth.transport import requests as google_requests
-from google.oauth2 import id_token
+# ====================================
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def google_login(request):
     token = request.data.get('token')
+
     try:
         idinfo = id_token.verify_oauth2_token(
             token, google_requests.Request(), getattr(settings, 'GOOGLE_CLIENT_ID', '')
         )
+
         email = idinfo['email']
         username = idinfo.get('name', email.split('@')[0])
 
@@ -207,6 +187,7 @@ def google_login(request):
             email=email,
             defaults={'username': username, 'role': 'ciudadano'}
         )
+
         if created:
             user.set_unusable_password()
             user.save()
@@ -219,18 +200,18 @@ def google_login(request):
             'username': user.username,
             'user_id': user.id
         })
+
     except Exception:
         return JsonResponse({'error': 'Token de Google inválido'}, status=400)
 
 
-# ===========================
-#   C) VEHICLE ENDPOINTS
-# ===========================
+# ====================================
+#   VEHICLES
+# ====================================
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def vehicle_detail(request, vehicle_id):
-    """Obtener ubicación del camión (todos los usuarios autenticados)."""
     try:
         vehicle = Vehicle.objects.get(id=vehicle_id)
     except Vehicle.DoesNotExist:
@@ -243,8 +224,6 @@ def vehicle_detail(request, vehicle_id):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def vehicle_update(request, vehicle_id):
-    """Actualizar ubicación del camión (solo recolector)."""
-
     if request.user.role != "recolector":
         return Response({'error': 'Solo recolectores pueden actualizar.'}, status=403)
 
@@ -267,9 +246,9 @@ def vehicle_update(request, vehicle_id):
     return Response({'message': 'Ubicación actualizada correctamente.'})
 
 
-# ============================================================
-#   🔥🔥🔥 TODO EL RESTO DE TU CÓDIGO ORIGINAL SIGUE AQUÍ ↓↓↓
-# ============================================================
+# ====================================
+#   ADMIN
+# ====================================
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
@@ -295,13 +274,12 @@ def admin_report_detail_view(request, pk):
         return Response({'error': 'Reporte no encontrado.'})
 
     new_status = request.data.get('status')
-    valid = ['pending', 'resolved', 'unresolved']
-
-    if new_status not in valid:
+    if new_status not in ['pending', 'resolved', 'unresolved']:
         return Response({'error': 'Estado inválido.'})
 
     report.status = new_status
     report.save()
+
     return Response({'message': 'Reporte actualizado.'})
 
 
@@ -315,7 +293,7 @@ def generate_reports_view(request):
     return Response({
         'completed_routes': completed,
         'pending_routes': pending,
-        'total_reports': total,
+        'total_reports': total
     })
 
 
@@ -331,7 +309,6 @@ def admin_routes_view(request):
         serializer = RouteSerializer(data=request.data)
         if serializer.is_valid():
             route = serializer.save()
-
             points = request.data.get('points', [])
             for p in points:
                 RoutePoint.objects.create(
@@ -344,6 +321,10 @@ def admin_routes_view(request):
         return Response(serializer.errors)
 
 
+# ====================================
+#   CIUDADANO – RUTAS
+# ====================================
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_routes_view(request):
@@ -351,12 +332,48 @@ def my_routes_view(request):
     serializer = RouteSerializer(routes, many=True)
     return Response(serializer.data)
 
+
+# ====================================
+#   REPORTES – CIUDADANO
+# ====================================
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def my_reports_view(request):
+
+    user = request.user  
+
+    if request.method == 'GET':
+        reports = Report.objects.filter(user=user).order_by('-created_at')
+        serializer = ReportSerializer(reports, many=True)
+        return Response(serializer.data)
+
+    if request.method == 'POST':
+
+        detalle = request.data.get('detalle')
+        tipo = request.data.get('tipo')
+
+        if not detalle:
+            return Response({'error': 'El campo detalle es requerido.'}, status=400)
+
+        report = Report.objects.create(
+            user=user,
+            detalle=detalle,
+            tipo=tipo or "incidencia",
+            status='pending'
+        )
+
+        serializer = ReportSerializer(report)
+        return Response(serializer.data, status=201)
+
+
+# ====================================
+#   OTROS
+# ====================================
+
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def create_default_vehicle(request):
-    """Crea un vehículo con ID 1 si no existe (solo admin)."""
-    from core.models import Vehicle
-
     if Vehicle.objects.filter(id=1).exists():
         return Response({'message': 'El vehículo ID 1 ya existe.'})
 
@@ -366,74 +383,44 @@ def create_default_vehicle(request):
         longitude=-91.514472
     )
 
-    return Response({'message': 'Vehículo ID 1 creado correctamente.'})
+    return Response({'message': 'Vehículo creado correctamente.'})
 
-# =============================
-#  REPORTES DE USUARIO (CIUDADANO)
-# =============================
-@api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
-def my_reports_view(request):
-
-    user = request.user  # Usuario autenticado
-
-    if request.method == 'GET':
-        reports = Report.objects.filter(user=user).order_by('-created_at')
-        serializer = ReportSerializer(reports, many=True)
-        return Response(serializer.data)
-
-    if request.method == 'POST':
-        description = request.data.get('description')
-
-        if not description:
-            return Response({'error': 'El campo description es requerido.'}, status=400)
-
-        report = Report.objects.create(
-            user=user,
-            description=description,
-            status='pending'
-        )
-
-        serializer = ReportSerializer(report)
-        return Response(serializer.data, status=201)
-    
-    # =============================
-#  REPORTES DE USUARIO (CIUDADANO)
-# =============================
-@api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
-def my_reports_view(request):
-
-    user = request.user  # Usuario autenticado
-
-    if request.method == 'GET':
-        reports = Report.objects.filter(user=user).order_by('-created_at')
-        serializer = ReportSerializer(reports, many=True)
-        return Response(serializer.data)
-
-    if request.method == 'POST':
-        description = request.data.get('description')
-
-        if not description:
-            return Response({'error': 'El campo description es requerido.'}, status=400)
-
-        report = Report.objects.create(
-            user=user,
-            description=description,
-            status='pending'
-        )
-
-        serializer = ReportSerializer(report)
-        return Response(serializer.data, status=201)
-
-
-# =====================
-#  VISTAS DE SISTEMA
-# =====================
 
 def home_view(request):
-    return HttpResponse("¡Bienvenido a Smart Collector! Esta es la página de inicio.")
+    return HttpResponse("¡Bienvenido a Smart Collector!")
 
 
 def dashboard_view(request):
     return HttpResponse(status=200)
+
+
+
+# ====================================
+# 📸  NUEVO – SUBIR FOTO DE PERFIL
+# ====================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_profile_picture(request):
+    user = request.user
+
+    if 'profile_picture' not in request.FILES:
+        return Response({'error': 'No se envió ninguna imagen.'}, status=400)
+
+    image = request.FILES['profile_picture']
+    
+    # Guardar en /media/profile_pics/
+    filename = f"profile_pics/user_{user.id}.jpg"
+    path = default_storage.save(filename, ContentFile(image.read()))
+
+    # Actualizar el usuario
+    user.photo = filename
+    user.save()
+
+    # URL completa
+    full_url = request.build_absolute_uri(settings.MEDIA_URL + filename)
+
+    return Response({
+        'message': 'Foto actualizada correctamente.',
+        'photo_url': full_url
+    })

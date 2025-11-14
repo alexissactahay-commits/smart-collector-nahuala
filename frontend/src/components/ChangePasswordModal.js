@@ -1,39 +1,63 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import './ChangePasswordModal.css';
+import React, { useState } from "react";
+import axios from "axios";
+import "./ChangePasswordModal.css";
 
 const ChangePasswordModal = ({ onClose }) => {
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const API_URL = process.env.REACT_APP_API_URL;
+
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validaciones
     if (newPassword !== confirmPassword) {
-      setError('Las nuevas contraseñas no coinciden.');
+      setError("Las nuevas contraseñas no coinciden.");
       return;
     }
+
     if (newPassword.length < 8) {
-      setError('La nueva contraseña debe tener al menos 8 caracteres.');
+      setError("La nueva contraseña debe tener al menos 8 caracteres.");
       return;
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        setError("Tu sesión expiró. Inicia sesión nuevamente.");
+        return;
+      }
+
       await axios.post(
-        'http://localhost:8000/api/change-password/',
-        { old_password: oldPassword, new_password: newPassword },
-        { headers: { Authorization: `Token ${token}` } }
+        `${API_URL}/change-password/`,
+        {
+          old_password: oldPassword,
+          new_password: newPassword,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
+
       setSuccess(true);
-      setError('');
+      setError("");
+
+      // Cerrar modal después de 2s
       setTimeout(() => {
         onClose();
       }, 2000);
     } catch (err) {
-      setError(err.response?.data?.error || 'Error al cambiar la contraseña.');
+      setError(
+        err.response?.data?.error ||
+          "Error al cambiar la contraseña. Verifica tus datos."
+      );
     }
   };
 
@@ -41,11 +65,15 @@ const ChangePasswordModal = ({ onClose }) => {
     <div className="modal-overlay">
       <div className="modal-content">
         <h3>Cambiar Contraseña</h3>
+
         {success ? (
-          <p style={{ color: 'green' }}>✅ Contraseña actualizada correctamente.</p>
+          <p style={{ color: "green" }}>
+            ✅ Contraseña actualizada correctamente.
+          </p>
         ) : (
           <form onSubmit={handleSubmit}>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
+            {error && <p style={{ color: "red" }}>{error}</p>}
+
             <div className="form-group">
               <label>Contraseña actual</label>
               <input
@@ -55,16 +83,18 @@ const ChangePasswordModal = ({ onClose }) => {
                 required
               />
             </div>
+
             <div className="form-group">
-              <label>Nueva contraseña (mín. 8 caracteres)</label>
+              <label>Nueva contraseña (mínimo 8 caracteres)</label>
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                required
                 minLength="8"
+                required
               />
             </div>
+
             <div className="form-group">
               <label>Confirmar nueva contraseña</label>
               <input
@@ -74,8 +104,11 @@ const ChangePasswordModal = ({ onClose }) => {
                 required
               />
             </div>
+
             <div className="modal-actions">
-              <button type="button" onClick={onClose}>Cancelar</button>
+              <button type="button" onClick={onClose}>
+                Cancelar
+              </button>
               <button type="submit">Guardar</button>
             </div>
           </form>

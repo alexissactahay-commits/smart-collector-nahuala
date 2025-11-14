@@ -130,6 +130,18 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # =======================================
+# 📸 MEDIA FILES (FOTOS DE PERFIL)
+# =======================================
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
+# Para servir media en desarrollo
+if DEBUG:
+    from django.conf.urls.static import static
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# =======================================
 # 🔑 JWT
 # =======================================
 REST_FRAMEWORK = {
@@ -162,3 +174,4 @@ GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID")
 # AUTO FIELD
 # =======================================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+

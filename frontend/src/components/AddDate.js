@@ -1,9 +1,11 @@
 // src/components/AddDate.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import './AddDate.css'; // Puedes crear este archivo después si quieres estilos
+import './AddDate.css';
 
 const AddDate = () => {
+  const API_URL = process.env.REACT_APP_API_URL;
+
   const [routes, setRoutes] = useState([]);
   const [routeId, setRouteId] = useState('');
   const [date, setDate] = useState('');
@@ -11,121 +13,107 @@ const AddDate = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  // Cargar rutas al montar
+  // ================================
+  // Cargar rutas y fechas al montar
+  // ================================
   useEffect(() => {
     fetchRoutes();
     fetchRouteDates();
   }, []);
 
+  // Cargar rutas
   const fetchRoutes = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        alert('No hay token de autenticación. Por favor, inicie sesión nuevamente.');
-        window.location.href = '/login';
-        return;
-      }
-      const res = await axios.get('http://localhost:8000/api/admin/routes/', {
+
+      const res = await axios.get(`${API_URL}/admin/routes/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
       setRoutes(res.data);
     } catch (err) {
       console.error('Error al cargar rutas:', err);
-      if (err.response?.status === 401) {
-        alert('Su sesión ha expirado. Por favor, inicie sesión nuevamente.');
-        localStorage.removeItem('token');
-        localStorage.removeItem('userRole');
-        window.location.href = '/login';
-      } else {
-        alert('Error al cargar las rutas. Por favor, inténtelo más tarde.');
-      }
+      alert('Error al cargar rutas. Inicie sesión nuevamente.');
     }
   };
 
+  // Cargar fechas programadas
   const fetchRouteDates = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        alert('No hay token de autenticación. Por favor, inicie sesión nuevamente.');
-        window.location.href = '/login';
-        return;
-      }
-      const res = await axios.get('http://localhost:8000/api/admin/route-dates/', {
+
+      const res = await axios.get(`${API_URL}/admin/route-dates/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
       setRouteDates(res.data);
     } catch (err) {
       console.error('Error al cargar fechas:', err);
-      if (err.response?.status === 401) {
-        alert('Su sesión ha expirado. Por favor, inicie sesión nuevamente.');
-        localStorage.removeItem('token');
-        localStorage.removeItem('userRole');
-        window.location.href = '/login';
-      } else {
-        alert('Error al cargar las fechas. Por favor, inténtelo más tarde.');
-      }
+      alert('Error al cargar las fechas.');
     }
   };
 
+  // ================================
+  // Agregar fecha
+  // ================================
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!routeId || !date) {
       alert('Seleccione una ruta y una fecha.');
       return;
     }
 
     setLoading(true);
+
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Token no encontrado');
-      }
+
       await axios.post(
-        'http://localhost:8000/api/admin/route-dates/',
-        { route: routeId, date },
-        { headers: { Authorization: `Bearer ${token}` } }
+        `${API_URL}/admin/route-dates/`,
+        {
+          route: routeId,
+          date
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
       );
+
       setMessage('✅ Fecha agregada correctamente.');
       setRouteId('');
       setDate('');
-      fetchRouteDates(); // Recargar lista
-      setTimeout(() => setMessage(''), 3000);
+
+      fetchRouteDates();
+
+      setTimeout(() => setMessage(''), 2500);
+
     } catch (err) {
       console.error('Error al agregar fecha:', err.response?.data || err.message);
-      if (err.response?.status === 401) {
-        alert('Su sesión ha expirado. Por favor, inicie sesión nuevamente.');
-        localStorage.removeItem('token');
-        localStorage.removeItem('userRole');
-        window.location.href = '/login';
-      } else {
-        alert('Error al agregar la fecha. Verifique su conexión o inténtelo más tarde.');
-      }
+      alert('Error al agregar la fecha. Intente nuevamente.');
     } finally {
       setLoading(false);
     }
   };
 
+  // ================================
+  // Eliminar fecha
+  // ================================
   const handleDelete = async (id) => {
     if (!window.confirm('¿Está seguro de eliminar esta fecha?')) return;
+
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Token no encontrado');
-      }
-      await axios.delete(`http://localhost:8000/api/admin/route-dates/${id}/`, {
+
+      await axios.delete(`${API_URL}/admin/route-dates/${id}/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
       fetchRouteDates();
+
     } catch (err) {
-      console.error('Error al eliminar fecha:', err);
-      if (err.response?.status === 401) {
-        alert('Su sesión ha expirado. Por favor, inicie sesión nuevamente.');
-        localStorage.removeItem('token');
-        localStorage.removeItem('userRole');
-        window.location.href = '/login';
-      } else {
-        alert('Error al eliminar la fecha. Por favor, inténtelo más tarde.');
-      }
+      console.error('Error al eliminar la fecha:', err);
+      alert('No se pudo eliminar la fecha.');
     }
   };
 
@@ -135,7 +123,9 @@ const AddDate = () => {
 
       {message && <div className="alert success">{message}</div>}
 
+      {/* Formulario */}
       <form onSubmit={handleSubmit} className="form">
+
         <div className="form-group">
           <label>Ruta:</label>
           <select
@@ -167,7 +157,9 @@ const AddDate = () => {
         </button>
       </form>
 
+      {/* Tabla */}
       <h3>Fechas Programadas</h3>
+
       {routeDates.length === 0 ? (
         <p>No hay fechas programadas.</p>
       ) : (
@@ -179,6 +171,7 @@ const AddDate = () => {
               <th>Acciones</th>
             </tr>
           </thead>
+
           <tbody>
             {routeDates.map((rd) => (
               <tr key={rd.id}>
@@ -195,6 +188,7 @@ const AddDate = () => {
               </tr>
             ))}
           </tbody>
+
         </table>
       )}
     </div>

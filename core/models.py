@@ -8,8 +8,17 @@ class User(AbstractUser):
         ('recolector', 'Recolector'),
         ('admin', 'Administrador'),
     )
+
     role = models.CharField(max_length=20, choices=ROLES, default='ciudadano')
     email = models.EmailField(unique=True)
+
+    # 👇 CAMPO NUEVO — Foto de perfil
+    photo = models.ImageField(
+        upload_to='profile_pictures/',
+        null=True,
+        blank=True,
+        verbose_name="Foto de perfil"
+    )
 
     class Meta:
         verbose_name = "Usuario"
@@ -110,7 +119,6 @@ class Report(models.Model):
         return f"Reporte de {self.get_tipo_display()} por {self.user.username}"
 
 
-# 👇 NUEVOS MODELOS: Fechas y Horarios de Rutas
 class RouteDate(models.Model):
     route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name='dates')
     date = models.DateField(verbose_name="Fecha")
@@ -139,7 +147,6 @@ class RouteSchedule(models.Model):
         return f"{self.route.name} - {self.start_time} a {self.end_time}"
 
 
-# 👇 NUEVO MODELO: Vehículo (ubicación en tiempo real del camión recolector)
 class Vehicle(models.Model):
     name = models.CharField(
         max_length=100,
@@ -164,3 +171,4 @@ class Vehicle(models.Model):
 
     def __str__(self):
         return f"{self.name} (lat={self.latitude}, lng={self.longitude})"
+
