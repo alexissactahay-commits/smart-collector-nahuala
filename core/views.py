@@ -351,6 +351,24 @@ def my_routes_view(request):
     serializer = RouteSerializer(routes, many=True)
     return Response(serializer.data)
 
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def create_default_vehicle(request):
+    """Crea un vehículo con ID 1 si no existe (solo admin)."""
+    from core.models import Vehicle
+
+    if Vehicle.objects.filter(id=1).exists():
+        return Response({'message': 'El vehículo ID 1 ya existe.'})
+
+    Vehicle.objects.create(
+        id=1,
+        latitude=14.886351,
+        longitude=-91.514472
+    )
+
+    return Response({'message': 'Vehículo ID 1 creado correctamente.'})
+
+
 
 # =====================
 #  VISTAS DE SISTEMA

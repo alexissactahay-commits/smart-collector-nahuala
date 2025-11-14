@@ -25,6 +25,8 @@ from core.views import (
     # Home
     home_view,
     dashboard_view,
+
+    create_default_vehicle,
 )
 
 urlpatterns = [
@@ -64,6 +66,9 @@ urlpatterns = [
     # ======================
     path('api/vehicles/<int:vehicle_id>/', vehicle_detail),
     path('api/vehicles/<int:vehicle_id>/update-location/', vehicle_update),
+    # Crear vehículo por defecto
+    path('api/admin/create-default-vehicle/', create_default_vehicle),
+
 ]
 
 
