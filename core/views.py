@@ -20,6 +20,10 @@ from django.utils import timezone
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 
+# 🚀 IMPORTS EXTRA PARA RENDER (PDF)
+from reportlab.pdfgen import canvas
+from io import BytesIO
+
 # MODELOS
 from .models import (
     Route, RoutePoint, Notification, Report, User,
@@ -557,16 +561,12 @@ def my_notifications_view(request):
 
 
 # ====================================
-#   🚀 FUNCIÓN EXTRA PARA RENDER — GENERAR REPORTES
+#   🚀 FUNCIÓN EXTRA 1 — LISTA DE REPORTES (Render)
 # ====================================
 
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
 def generate_reports_view(request):
-    """
-    Esta función existe para evitar errores en Render.
-    Retorna todos los reportes generados en el sistema.
-    """
     reports = Report.objects.select_related("user").order_by("-fecha")
     serializer = ReportSerializer(reports, many=True)
     return Response({
@@ -574,5 +574,42 @@ def generate_reports_view(request):
         "total": len(serializer.data),
         "reports": serializer.data
     }, status=200)
+
+
+# ====================================
+#   🚀 FUNCIÓN EXTRA 2 — PDF DE REPORTES (Render)
+# ====================================
+
+@api_view(["GET"])
+@permission_classes([IsAdminUser])
+def generate_reports_pdf_view(request):
+    """
+    Genera un PDF simple con los reportes.
+    (Render lo necesita para no fallar)
+    """
+    reports = Report.objects.select_related("user").order_by("-fecha")
+
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer)
+
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(50, 800, "Reporte General – Smart Collector")
+    p.setFont("Helvetica", 10)
+
+    y = 770
+    for r in reports:
+        text = f"{r.fecha} — {r.user.username}: {r.detalle[:60]}..."
+        p.drawString(50, y, text)
+        y -= 20
+
+        if y < 50:
+            p.showPage()
+            p.setFont("Helvetica", 10)
+            y = 800
+
+    p.save()
+    buffer.seek(0)
+
+    return HttpResponse(buffer, content_type="application/pdf")
 
 
