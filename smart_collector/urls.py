@@ -9,7 +9,6 @@ from core.views import (
     register_view,
     change_password,
     forgot_password_view,
-    send_message_view,
 
     # Ciudadanos
     my_routes_view,
@@ -68,8 +67,6 @@ urlpatterns = [
     path('api/admin/reports/<int:pk>/', admin_report_detail_view),
     path('api/admin/reports/generate/', generate_reports_view),
     path('api/admin/routes/', admin_routes_view),
-    path('api/admin/messages/', send_message_view, name='send-message'),
-
 
     # ======================
     #     VEHÍCULO

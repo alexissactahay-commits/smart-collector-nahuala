@@ -378,71 +378,7 @@ def admin_routes_view(request):
             return Response(serializer.data)
         return Response(serializer.errors)
     
-# ====================================
-#   ADMIN - ENVIAR MENSAJES
-# ====================================
 
-@api_view(["GET", "POST"])
-@permission_classes([IsAuthenticated])   # si quieres solo admin: IsAdminUser
-def send_message_view(request):
-    """
-    GET  -> listar mensajes enviados
-    POST -> enviar mensaje a un usuario o a todos
-    """
-
-    # SOLO ADMIN
-    if request.user.role != "admin":
-        return Response({"error": "Solo administradores pueden enviar mensajes."}, status=403)
-
-    # ======= GET: retornar mensajes =======
-    if request.method == "GET":
-        mensajes = Notification.objects.select_related("usuario").order_by("-created_at")
-        data = [
-            {
-                "id": m.id,
-                "usuario": {
-                    "id": m.usuario.id,
-                    "username": m.usuario.username,
-                } if m.usuario else None,
-                "message": m.message,
-                "estado": m.estado,
-                "created_at": m.created_at,
-            }
-            for m in mensajes
-        ]
-        return Response(data)
-
-    # ======= POST: enviar mensaje =======
-    if request.method == "POST":
-        message = request.data.get("message")
-        user_id = request.data.get("user_id")  # puede ser null para enviar a TODOS
-
-        if not message:
-            return Response({"error": "El mensaje es obligatorio"}, status=400)
-
-        # enviar a TODOS
-        if user_id is None:
-            for u in User.objects.all():
-                Notification.objects.create(
-                    usuario=u,
-                    message=message,
-                    estado="sent"
-                )
-            return Response({"message": "Mensaje enviado a todos los usuarios."}, status=201)
-
-        # enviar a uno
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return Response({"error": "Usuario no encontrado"}, status=404)
-
-        Notification.objects.create(
-            usuario=user,
-            message=message,
-            estado="sent"
-        )
-
-        return Response({"message": "Mensaje enviado correctamente"}, status=201)
 
 
 # ====================================

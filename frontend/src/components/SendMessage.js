@@ -12,14 +12,9 @@ const SendMessage = () => {
 
   const token = localStorage.getItem('token');
 
-  // 🔥 Construcción segura del endpoint
-  const BASE_URL = process.env.REACT_APP_API_URL.endsWith('/')
-    ? process.env.REACT_APP_API_URL + 'api/'
-    : process.env.REACT_APP_API_URL + '/api/';
-
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await axios.get(`${BASE_URL}admin/users/`, {
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}admin/users/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(res.data);
@@ -27,11 +22,11 @@ const SendMessage = () => {
       console.error('Error al cargar usuarios:', err);
       setAlert({ message: 'Error al cargar la lista de usuarios.', type: 'error' });
     }
-  }, [BASE_URL, token]);
+  }, [token]);
 
   const fetchSentMessages = useCallback(async () => {
     try {
-      const res = await axios.get(`${BASE_URL}admin/messages/`, {
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}admin/messages/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSentMessages(res.data);
@@ -39,8 +34,9 @@ const SendMessage = () => {
       console.error('Error al cargar mensajes enviados:', err);
       setAlert({ message: 'Error al cargar el historial de mensajes.', type: 'error' });
     }
-  }, [BASE_URL, token]);
+  }, [token]);
 
+  // Cargar usuarios y mensajes enviados al montar
   useEffect(() => {
     fetchUsers();
     fetchSentMessages();
@@ -56,20 +52,19 @@ const SendMessage = () => {
     setLoading(true);
     try {
       await axios.post(
-        `${BASE_URL}admin/messages/`,
+        `${process.env.REACT_APP_API_URL}admin/messages/`,
         {
           message: message.trim(),
-          user_id: selectedRecipientId || null
+          user_id: selectedRecipientId || null // null = enviar a todos
         },
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
-
       setAlert({ message: 'Mensaje enviado correctamente.', type: 'success' });
       setMessage('');
       setSelectedRecipientId('');
-      fetchSentMessages();
+      fetchSentMessages(); // Recargar historial
       setTimeout(() => setAlert({ message: '', type: '' }), 3000);
     } catch (err) {
       console.error('Error al enviar mensaje:', err);
