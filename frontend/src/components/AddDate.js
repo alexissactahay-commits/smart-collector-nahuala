@@ -1,198 +1,136 @@
-// src/components/AddDate.js
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import './AddDate.css';
+// AddDate.js
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import "./AddDate.css";
 
 const AddDate = () => {
-  const API_URL = process.env.REACT_APP_API_URL;
+
+  // 🔥 NORMALIZAMOS LA URL COMO EN LOS OTROS COMPONENTES
+  let API_URL = process.env.REACT_APP_API_URL || "";
+  API_URL = API_URL.replace(/\/+$/, ""); // quitar / sobrantes al final
+
+  if (!API_URL.endsWith("/api")) {
+    API_URL = `${API_URL}/api`;
+  }
 
   const [routes, setRoutes] = useState([]);
-  const [routeId, setRouteId] = useState('');
-  const [date, setDate] = useState('');
-  const [routeDates, setRouteDates] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [dates, setDates] = useState([]);
+  const [selectedRoute, setSelectedRoute] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // ================================
-  // Cargar rutas y fechas al montar
-  // ================================
+  // ===========================
+  // Cargar rutas al iniciar
+  // ===========================
   useEffect(() => {
     fetchRoutes();
-    fetchRouteDates();
+    fetchDates();
   }, []);
 
-  // Cargar rutas
   const fetchRoutes = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
 
       const res = await axios.get(`${API_URL}/admin/routes/`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       setRoutes(res.data);
     } catch (err) {
-      console.error('Error al cargar rutas:', err);
-      alert('Error al cargar rutas. Inicie sesión nuevamente.');
+      console.error("❌ Error al cargar rutas:", err);
+      alert("Error al cargar rutas.");
     }
   };
 
-  // Cargar fechas programadas
-  const fetchRouteDates = async () => {
+  const fetchDates = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
 
       const res = await axios.get(`${API_URL}/admin/route-dates/`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      setRouteDates(res.data);
+      setDates(res.data);
     } catch (err) {
-      console.error('Error al cargar fechas:', err);
-      alert('Error al cargar las fechas.');
-    }
-  };
-
-  // ================================
-  // Agregar fecha
-  // ================================
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!routeId || !date) {
-      alert('Seleccione una ruta y una fecha.');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const token = localStorage.getItem('token');
-
-      await axios.post(
-        `${API_URL}/admin/route-dates/`,
-        {
-          route: routeId,
-          date
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-
-      setMessage('✅ Fecha agregada correctamente.');
-      setRouteId('');
-      setDate('');
-
-      fetchRouteDates();
-
-      setTimeout(() => setMessage(''), 2500);
-
-    } catch (err) {
-      console.error('Error al agregar fecha:', err.response?.data || err.message);
-      alert('Error al agregar la fecha. Intente nuevamente.');
+      console.error("❌ Error al cargar fechas:", err);
+      alert("Error al cargar fechas.");
     } finally {
       setLoading(false);
     }
   };
 
-  // ================================
-  // Eliminar fecha
-  // ================================
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Está seguro de eliminar esta fecha?')) return;
+  // ===========================
+  // Guardar fecha nueva
+  // ===========================
+  const addDate = async () => {
+    if (!selectedRoute || !selectedDate) {
+      alert("Debe seleccionar ruta y fecha.");
+      return;
+    }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
 
-      await axios.delete(`${API_URL}/admin/route-dates/${id}/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await axios.post(
+        `${API_URL}/admin/route-dates/`,
+        {
+          route_id: selectedRoute,
+          date: selectedDate,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-      fetchRouteDates();
-
+      alert("Fecha agregada correctamente.");
+      fetchDates();
     } catch (err) {
-      console.error('Error al eliminar la fecha:', err);
-      alert('No se pudo eliminar la fecha.');
+      console.error("❌ Error al agregar fecha:", err);
+      alert("Error al agregar la fecha.");
     }
   };
 
+  if (loading) return <div>Cargando...</div>;
+
   return (
     <div className="add-date-container">
-      <h2>📅 Agregar Fecha de Ruta</h2>
+      <h1>📅 Agregar Fecha de Ruta</h1>
 
-      {message && <div className="alert success">{message}</div>}
+      <label>Ruta:</label>
+      <select
+        value={selectedRoute}
+        onChange={(e) => setSelectedRoute(e.target.value)}
+      >
+        <option value="">-- Seleccione una ruta --</option>
+        {routes.map((r) => (
+          <option key={r.id} value={r.id}>
+            {r.name} ({r.day_of_week})
+          </option>
+        ))}
+      </select>
 
-      {/* Formulario */}
-      <form onSubmit={handleSubmit} className="form">
+      <label>Fecha:</label>
+      <input
+        type="date"
+        value={selectedDate}
+        onChange={(e) => setSelectedDate(e.target.value)}
+      />
 
-        <div className="form-group">
-          <label>Ruta:</label>
-          <select
-            value={routeId}
-            onChange={(e) => setRouteId(e.target.value)}
-            required
-          >
-            <option value="">-- Seleccione una ruta --</option>
-            {routes.map((route) => (
-              <option key={route.id} value={route.id}>
-                {route.name} ({route.day_of_week})
-              </option>
-            ))}
-          </select>
-        </div>
+      <button onClick={addDate}>Agregar Fecha</button>
 
-        <div className="form-group">
-          <label>Fecha:</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
-          />
-        </div>
-
-        <button type="submit" disabled={loading}>
-          {loading ? 'Guardando...' : 'Agregar Fecha'}
-        </button>
-      </form>
-
-      {/* Tabla */}
-      <h3>Fechas Programadas</h3>
-
-      {routeDates.length === 0 ? (
+      <h2>Fechas Programadas</h2>
+      {dates.length === 0 ? (
         <p>No hay fechas programadas.</p>
       ) : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Ruta</th>
-              <th>Fecha</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {routeDates.map((rd) => (
-              <tr key={rd.id}>
-                <td>{rd.route?.name || 'Ruta no disponible'}</td>
-                <td>{rd.date}</td>
-                <td>
-                  <button
-                    onClick={() => handleDelete(rd.id)}
-                    className="btn-delete"
-                  >
-                    Eliminar
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-
-        </table>
+        dates.map((d) => (
+          <div key={d.id}>
+            📅 {d.date} — Ruta {d.route?.name}
+          </div>
+        ))
       )}
     </div>
   );
 };
 
 export default AddDate;
+

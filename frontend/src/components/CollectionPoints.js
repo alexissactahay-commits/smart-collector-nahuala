@@ -65,14 +65,6 @@ const CollectionPoints = () => {
     <div className="collection-points-container">
       <h1>Puntos de Recolección - Smart Collector</h1>
 
-      <div className="info-box">
-        <p>
-          <strong>Nota:</strong> Actualmente solo está habilitada la vista de
-          rutas. Si necesitas crear, editar o eliminar rutas, puedo crear los
-          endpoints reales en Django.
-        </p>
-      </div>
-
       {/* Lista de rutas existentes */}
       <div className="existing-routes">
         <h2>Rutas Existentes</h2>

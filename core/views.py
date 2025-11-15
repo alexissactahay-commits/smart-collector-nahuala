@@ -131,7 +131,6 @@ def change_password(request):
 
     return Response({"message": "Contraseña actualizada correctamente."})
 
-
 # ====================================
 #   RECUPERAR CONTRASEÑA
 # ====================================
@@ -152,11 +151,7 @@ def forgot_password_view(request):
     token = default_token_generator.make_token(user)
 
     host = request.get_host()
-    base_url = (
-        "https://smartcollectorolintepeque.com"
-        if "localhost" not in host
-        else "http://localhost:3000"
-    )
+    base_url = "https://smartcollectorolintepeque.com" if "localhost" not in host else "http://localhost:3000"
 
     reset_url = f"{base_url}/reset-password/{uidb64}/{token}/"
 
@@ -166,7 +161,6 @@ def forgot_password_view(request):
     send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
 
     return Response({"message": "Si el correo existe, recibirás instrucciones."})
-
 
 # ====================================
 #   GOOGLE LOGIN
@@ -322,6 +316,57 @@ def admin_routes_view(request):
         return Response(serializer.errors, status=400)
 
 
+# =====================================================
+#   🚀 ADMIN – FECHAS DE RUTAS (NUEVO, PARA AddDate.js)
+# =====================================================
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAdminUser])
+def admin_route_dates_view(request):
+
+    # OBTENER TODAS LAS FECHAS
+    if request.method == "GET":
+        fechas = RouteDate.objects.select_related("route").order_by("date")
+        data = [
+            {
+                "id": f.id,
+                "date": f.date,
+                "route": {
+                    "id": f.route.id,
+                    "name": f.route.name,
+                    "day_of_week": f.route.day_of_week,
+                }
+            }
+            for f in fechas
+        ]
+        return Response(data, status=200)
+
+    # CREAR NUEVA FECHA
+    if request.method == "POST":
+        route_id = request.data.get("route_id")
+        date = request.data.get("date")
+
+        if not route_id or not date:
+            return Response({"error": "route_id y date son obligatorios"}, status=400)
+
+        try:
+            route = Route.objects.get(id=route_id)
+        except Route.DoesNotExist:
+            return Response({"error": "Ruta no encontrada"}, status=404)
+
+        nueva_fecha = RouteDate.objects.create(
+            route=route,
+            date=date
+        )
+
+        return Response({
+            "message": "Fecha agregada correctamente",
+            "id": nueva_fecha.id,
+            "date": nueva_fecha.date,
+            "route_id": route_id
+        }, status=201)
+
+
 # ====================================
 #   ADMIN – GENERAR INFORMES
 # ====================================
@@ -350,11 +395,11 @@ def generate_reports_view(request):
         "unresolved_reports": unresolved_reports,
         "pending_reports": pending_reports,
         "days_since_first_report": days_diff,
-    })
+    }, status=200)
 
 
 # ====================================
-#   ADMIN – GENERAR PDF (FINAL)
+#   ADMIN – GENERAR PDF
 # ====================================
 
 @api_view(["GET"])
@@ -424,7 +469,7 @@ def send_message_view(request):
             }
             for m in mensajes
         ]
-        return Response(data)
+        return Response(data, status=200)
 
     if request.method == "POST":
         message = request.data.get("message")
@@ -576,5 +621,4 @@ def my_notifications_view(request):
         for m in mensajes
     ]
 
-    return Response(data)
-
+    return Response(data, status=200)

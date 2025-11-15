@@ -23,6 +23,7 @@ from core.views import (
     generate_reports_view,
     generate_reports_pdf_view,   # 🔥 NECESARIO PARA PDF
     admin_routes_view,
+    admin_route_dates_view,      # 🔥 NUEVO – usado por AddDate.js
     send_message_view,
 
     # Vehículos
@@ -78,6 +79,9 @@ urlpatterns = [
 
     # 🔥 ADMIN — RUTAS (USADO POR CollectionPoints)
     path('api/admin/routes/', admin_routes_view),
+
+    # 🔥 ADMIN — FECHAS DE RUTA (USADO POR AddDate.js)
+    path('api/admin/route-dates/', admin_route_dates_view),
 
     # 🔥 NUEVO — mensajes del admin
     path('api/admin/messages/', send_message_view),
