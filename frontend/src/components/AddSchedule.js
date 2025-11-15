@@ -4,8 +4,20 @@ import axios from 'axios';
 import './AddSchedule.css';
 
 const AddSchedule = () => {
-  const API_URL = process.env.REACT_APP_API_URL;
 
+  // ============================
+  // NORMALIZACIÓN DE API_URL
+  // ============================
+  let API_URL = process.env.REACT_APP_API_URL || "";
+  API_URL = API_URL.replace(/\/+$/, ""); // Quitamos "/" al final
+
+  if (!API_URL.endsWith("/api")) {
+    API_URL = `${API_URL}/api`;
+  }
+
+  // ============================
+  // STATES
+  // ============================
   const [routes, setRoutes] = useState([]);
   const [routeId, setRouteId] = useState('');
   const [dayOfWeek, setDayOfWeek] = useState('');
@@ -20,9 +32,9 @@ const AddSchedule = () => {
     'Viernes', 'Sábado', 'Domingo'
   ];
 
-  // ===========================
+  // ============================
   // Cargar rutas y horarios
-  // ===========================
+  // ============================
   useEffect(() => {
     fetchRoutes();
     fetchRouteSchedules();
@@ -58,9 +70,9 @@ const AddSchedule = () => {
     }
   };
 
-  // ===========================
+  // ============================
   // Guardar nuevo horario
-  // ===========================
+  // ============================
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -103,9 +115,9 @@ const AddSchedule = () => {
     }
   };
 
-  // ===========================
+  // ============================
   // Eliminar horario
-  // ===========================
+  // ============================
   const handleDelete = async (id) => {
     if (!window.confirm('¿Está seguro de eliminar este horario?')) return;
 
@@ -124,6 +136,9 @@ const AddSchedule = () => {
     }
   };
 
+  // ============================
+  // RENDER
+  // ============================
   return (
     <div className="add-schedule-container">
       <h2>⏰ Agregar Horario de Ruta</h2>
@@ -231,3 +246,4 @@ const AddSchedule = () => {
 };
 
 export default AddSchedule;
+

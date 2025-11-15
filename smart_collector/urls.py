@@ -21,9 +21,11 @@ from core.views import (
     admin_reports_view,
     admin_report_detail_view,
     generate_reports_view,
-    generate_reports_pdf_view,   # 🔥 NECESARIO PARA PDF
+    generate_reports_pdf_view,
     admin_routes_view,
-    admin_route_dates_view,      # 🔥 NUEVO – usado por AddDate.js
+    admin_route_dates_view,          # 🔥 fechas de ruta (AddDate.js)
+    admin_route_schedules_view,      # 🔥 horarios (AddSchedule.js)
+    admin_route_schedule_delete_view, # 🔥 eliminar horario
     send_message_view,
 
     # Vehículos
@@ -74,16 +76,20 @@ urlpatterns = [
     # 🔥 **GENERAR INFORME JSON**
     path('api/admin/reports/generate/', generate_reports_view),
 
-    # 🔥 **GENERAR PDF (FUNCIONA CON REPORTLAB)**
+    # 🔥 **GENERAR PDF**
     path('api/admin/reports/generate-pdf/', generate_reports_pdf_view),
 
-    # 🔥 ADMIN — RUTAS (USADO POR CollectionPoints)
+    # 🔥 ADMIN — RUTAS (CollectionPoints)
     path('api/admin/routes/', admin_routes_view),
 
-    # 🔥 ADMIN — FECHAS DE RUTA (USADO POR AddDate.js)
+    # 🔥 ADMIN — FECHAS DE RUTA (AddDate.js)
     path('api/admin/route-dates/', admin_route_dates_view),
 
-    # 🔥 NUEVO — mensajes del admin
+    # 🔥 ADMIN — HORARIOS DE RUTA (AddSchedule.js)
+    path('api/admin/route-schedules/', admin_route_schedules_view),         # GET + POST
+    path('api/admin/route-schedules/<int:pk>/', admin_route_schedule_delete_view),  # DELETE
+
+    # 🔥 MENSAJES
     path('api/admin/messages/', send_message_view),
 
     # ======================

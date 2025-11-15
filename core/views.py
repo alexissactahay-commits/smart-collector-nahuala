@@ -17,7 +17,6 @@ from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils import timezone
-
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 
@@ -131,6 +130,7 @@ def change_password(request):
 
     return Response({"message": "Contraseña actualizada correctamente."})
 
+
 # ====================================
 #   RECUPERAR CONTRASEÑA
 # ====================================
@@ -161,6 +161,7 @@ def forgot_password_view(request):
     send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
 
     return Response({"message": "Si el correo existe, recibirás instrucciones."})
+
 
 # ====================================
 #   GOOGLE LOGIN
@@ -275,6 +276,7 @@ def admin_report_detail_view(request, pk):
 
     new_status = request.data.get("status")
     if new_status not in ["pending", "resolved", "unresolved"]:
+
         return Response({"error": "Estado inválido."})
 
     report.status = new_status
@@ -315,16 +317,14 @@ def admin_routes_view(request):
 
         return Response(serializer.errors, status=400)
 
-
 # =====================================================
-#   🚀 ADMIN – FECHAS DE RUTAS (NUEVO, PARA AddDate.js)
+#   🚀 ADMIN – FECHAS DE RUTAS (AddDate.js)
 # =====================================================
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAdminUser])
 def admin_route_dates_view(request):
 
-    # OBTENER TODAS LAS FECHAS
     if request.method == "GET":
         fechas = RouteDate.objects.select_related("route").order_by("date")
         data = [
@@ -341,7 +341,6 @@ def admin_route_dates_view(request):
         ]
         return Response(data, status=200)
 
-    # CREAR NUEVA FECHA
     if request.method == "POST":
         route_id = request.data.get("route_id")
         date = request.data.get("date")
@@ -366,140 +365,73 @@ def admin_route_dates_view(request):
             "route_id": route_id
         }, status=201)
 
-
-# ====================================
-#   ADMIN – GENERAR INFORMES
-# ====================================
-
-@api_view(["GET"])
-@permission_classes([IsAdminUser])
-def generate_reports_view(request):
-    completed_routes = Route.objects.filter(completed=True).count()
-    pending_routes = Route.objects.filter(completed=False).count()
-    total_reports = Report.objects.count()
-    resolved_reports = Report.objects.filter(status="resolved").count()
-    unresolved_reports = Report.objects.filter(status="unresolved").count()
-    pending_reports = Report.objects.filter(status="pending").count()
-
-    first_report = Report.objects.order_by("fecha").first()
-    if first_report:
-        days_diff = (timezone.now().date() - first_report.fecha.date()).days
-    else:
-        days_diff = 0
-
-    return Response({
-        "completed_routes": completed_routes,
-        "pending_routes": pending_routes,
-        "total_reports": total_reports,
-        "resolved_reports": resolved_reports,
-        "unresolved_reports": unresolved_reports,
-        "pending_reports": pending_reports,
-        "days_since_first_report": days_diff,
-    }, status=200)
-
-
-# ====================================
-#   ADMIN – GENERAR PDF
-# ====================================
-
-@api_view(["GET"])
-@permission_classes([IsAdminUser])
-def generate_reports_pdf_view(request):
-
-    from reportlab.lib.pagesizes import letter
-    from reportlab.pdfgen import canvas
-    from io import BytesIO
-
-    buffer = BytesIO()
-    pdf = canvas.Canvas(buffer, pagesize=letter)
-
-    pdf.setFont("Helvetica-Bold", 18)
-    pdf.drawString(50, 750, "Reporte General - Smart Collector")
-
-    pdf.setFont("Helvetica", 12)
-
-    pdf.drawString(50, 720, f"Rutas completadas: {Route.objects.filter(completed=True).count()}")
-    pdf.drawString(50, 700, f"Rutas pendientes: {Route.objects.filter(completed=False).count()}")
-
-    pdf.drawString(50, 670, f"Reportes recibidos: {Report.objects.count()}")
-    pdf.drawString(50, 650, f"Resueltos: {Report.objects.filter(status='resolved').count()}")
-    pdf.drawString(50, 630, f"No solucionados: {Report.objects.filter(status='unresolved').count()}")
-    pdf.drawString(50, 610, f"Pendientes: {Report.objects.filter(status='pending').count()}")
-
-    first_report = Report.objects.order_by("fecha").first()
-    if first_report:
-        days_diff = (timezone.now().date() - first_report.fecha.date()).days
-    else:
-        days_diff = 0
-
-    pdf.drawString(50, 580, f"Días desde el primer reporte: {days_diff}")
-
-    pdf.showPage()
-    pdf.save()
-
-    buffer.seek(0)
-
-    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
-    response["Content-Disposition"] = 'attachment; filename="reporte_smart_collector.pdf"'
-
-    return response
-
-
-# ====================================
-#   ADMIN – ENVIAR MENSAJES
-# ====================================
+# =====================================================
+#   🚀 ADMIN – HORARIOS DE RUTAS (AddSchedule.js)
+# =====================================================
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAdminUser])
-def send_message_view(request):
+def admin_route_schedules_view(request):
 
     if request.method == "GET":
-        mensajes = Notification.objects.select_related("usuario").order_by("-created_at")
+        horarios = RouteSchedule.objects.select_related("route").order_by("day_of_week", "start_time")
+
         data = [
             {
-                "id": m.id,
-                "usuario": {
-                    "id": m.usuario.id,
-                    "username": m.usuario.username,
-                    "email": m.usuario.email,
-                } if m.usuario else None,
-                "message": m.message,
-                "estado": m.estado,
-                "created_at": m.created_at,
+                "id": h.id,
+                "day_of_week": h.day_of_week,
+                "start_time": h.start_time,
+                "end_time": h.end_time,
+                "route": {
+                    "id": h.route.id,
+                    "name": h.route.name,
+                    "day_of_week": h.route.day_of_week
+                }
             }
-            for m in mensajes
+            for h in horarios
         ]
+
         return Response(data, status=200)
 
     if request.method == "POST":
-        message = request.data.get("message")
-        user_id = request.data.get("user_id")
+        route_id = request.data.get("route")
+        day_of_week = request.data.get("day_of_week")
+        start_time = request.data.get("start_time")
+        end_time = request.data.get("end_time")
 
-        if not message:
-            return Response({"error": "El mensaje es obligatorio"}, status=400)
-
-        if user_id is None:
-            for user in User.objects.all():
-                Notification.objects.create(
-                    usuario=user,
-                    message=message,
-                    estado="sent",
-                )
-            return Response({"message": "Mensaje enviado a todos los usuarios"}, status=201)
+        if not route_id or not day_of_week or not start_time or not end_time:
+            return Response({"error": "Todos los campos son obligatorios"}, status=400)
 
         try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return Response({"error": "Usuario no encontrado"}, status=404)
+            route = Route.objects.get(id=route_id)
+        except Route.DoesNotExist:
+            return Response({"error": "Ruta no encontrada"}, status=404)
 
-        Notification.objects.create(
-            usuario=user,
-            message=message,
-            estado="sent",
+        nuevo = RouteSchedule.objects.create(
+            route=route,
+            day_of_week=day_of_week,
+            start_time=start_time,
+            end_time=end_time
         )
 
-        return Response({"message": "Mensaje enviado correctamente"}, status=201)
+        return Response({
+            "message": "Horario agregado correctamente",
+            "id": nuevo.id
+        }, status=201)
 
+
+@api_view(["DELETE"])
+@permission_classes([IsAdminUser])
+def admin_route_schedule_delete_view(request, pk):
+
+    try:
+        horario = RouteSchedule.objects.get(pk=pk)
+    except RouteSchedule.DoesNotExist:
+        return Response({"error": "Horario no encontrado"}, status=404)
+
+    horario.delete()
+
+    return Response({"message": "Horario eliminado correctamente"}, status=200)
 
 # ====================================
 #   CIUDADANO – RUTAS
@@ -622,3 +554,4 @@ def my_notifications_view(request):
     ]
 
     return Response(data, status=200)
+
