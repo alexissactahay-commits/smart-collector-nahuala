@@ -280,7 +280,6 @@ def admin_report_detail_view(request, pk):
 
     new_status = request.data.get("status")
     if new_status not in ["pending", "resolved", "unresolved"]:
-
         return Response({"error": "Estado inválido."})
 
     report.status = new_status
@@ -322,7 +321,7 @@ def admin_routes_view(request):
         return Response(serializer.errors, status=400)
 
 # =====================================================
-#   🚀 ADMIN – FECHAS DE RUTAS (AddDate.js)
+#   🚀 ADMIN – FECHAS DE RUTAS
 # =====================================================
 
 @api_view(["GET", "POST"])
@@ -336,9 +335,9 @@ def admin_route_dates_view(request):
                 "id": f.id,
                 "date": f.date,
                 "route": {
-                    "id": f.route.id,
-                    "name": f.route.name,
-                    "day_of_week": f.route.day_of_week,
+                        "id": f.route.id,
+                        "name": f.route.name,
+                        "day_of_week": f.route.day_of_week,
                 }
             }
             for f in fechas
@@ -370,7 +369,7 @@ def admin_route_dates_view(request):
         }, status=201)
 
 # =====================================================
-#   🚀 ADMIN – HORARIOS DE RUTAS (AddSchedule.js)
+#   🚀 ADMIN – HORARIOS DE RUTAS
 # =====================================================
 
 @api_view(["GET", "POST"])
@@ -448,7 +447,6 @@ def my_routes_view(request):
     serializer = RouteSerializer(routes, many=True)
     return Response(serializer.data)
 
-
 # ====================================
 #   CIUDADANO – REPORTES
 # ====================================
@@ -480,7 +478,6 @@ def my_reports_view(request):
         serializer = ReportSerializer(report)
         return Response(serializer.data, status=201)
 
-
 # ====================================
 #   OTROS
 # ====================================
@@ -506,7 +503,6 @@ def home_view(request):
 
 def dashboard_view(request):
     return HttpResponse(status=200)
-
 
 # ====================================
 #   SUBIR FOTO
@@ -535,7 +531,6 @@ def upload_profile_picture(request):
         "photo_url": full_url,
     })
 
-
 # ====================================
 #   NOTIFICACIONES CIUDADANO
 # ====================================
@@ -559,9 +554,8 @@ def my_notifications_view(request):
 
     return Response(data, status=200)
 
-
 # ====================================
-#   🚀 FUNCIÓN EXTRA 1 — LISTA DE REPORTES (Render)
+#   🚀 FUNCIÓN EXTRA 1 — LISTA DE REPORTES
 # ====================================
 
 @api_view(["GET"])
@@ -575,18 +569,13 @@ def generate_reports_view(request):
         "reports": serializer.data
     }, status=200)
 
-
 # ====================================
-#   🚀 FUNCIÓN EXTRA 2 — PDF DE REPORTES (Render)
+#   🚀 FUNCIÓN EXTRA 2 — PDF DE REPORTES
 # ====================================
 
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
 def generate_reports_pdf_view(request):
-    """
-    Genera un PDF simple con los reportes.
-    (Render lo necesita para no fallar)
-    """
     reports = Report.objects.select_related("user").order_by("-fecha")
 
     buffer = BytesIO()
@@ -611,5 +600,35 @@ def generate_reports_pdf_view(request):
     buffer.seek(0)
 
     return HttpResponse(buffer, content_type="application/pdf")
+
+# ====================================
+#   🚀 FUNCIÓN EXTRA 3 — ENVIAR MENSAJE
+# ====================================
+
+@api_view(["POST"])
+@permission_classes([IsAdminUser])
+def send_message_view(request):
+    user_id = request.data.get("user_id")
+    message = request.data.get("message")
+
+    if not user_id or not message:
+        return Response(
+            {"error": "user_id y message son obligatorios."},
+            status=400
+        )
+
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({"error": "Usuario no encontrado."}, status=404)
+
+    Notification.objects.create(
+        usuario=user,
+        message=message,
+        estado="pendiente"
+    )
+
+    return Response({"message": "Mensaje enviado correctamente."}, status=201)
+
 
 
