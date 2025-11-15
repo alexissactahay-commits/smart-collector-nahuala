@@ -500,3 +500,25 @@ def upload_profile_picture(request):
 
     return Response({"message": "Foto actualizada correctamente.", "photo_url": full_url})
 
+# ====================================
+#   CIUDADANO – NOTIFICACIONES
+# ====================================
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def my_notifications_view(request):
+    user = request.user
+
+    mensajes = Notification.objects.filter(usuario=user).order_by("-created_at")
+
+    data = [
+        {
+            "id": m.id,
+            "message": m.message,
+            "estado": m.estado,
+            "created_at": m.created_at,
+        }
+        for m in mensajes
+    ]
+
+    return Response(data)

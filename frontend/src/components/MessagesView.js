@@ -8,9 +8,13 @@ const MessagesView = () => {
   const [loading, setLoading] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState(null);
 
-  const API_URL = process.env.REACT_APP_API_URL; // 👈 USAMOS LA URL DE PRODUCCIÓN
+  // 🔥 Corrige la URL base
+  const RAW_URL = process.env.REACT_APP_API_URL;
 
-  // Cargar mensajes reales del backend
+  const API_URL = RAW_URL.endsWith('/') 
+    ? `${RAW_URL}api/`
+    : `${RAW_URL}/api/`;
+
   useEffect(() => {
     const fetchMessages = async () => {
       try {
@@ -22,8 +26,9 @@ const MessagesView = () => {
           return;
         }
 
+        // 🔥 Ruta corregida
         const response = await axios.get(
-          `${API_URL}/my-notifications/`, // 👈 AHORA YA NO ES LOCALHOST
+          `${API_URL}my-notifications/`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -31,7 +36,6 @@ const MessagesView = () => {
           }
         );
 
-        // Adaptamos los datos al formato del frontend
         const formattedMessages = response.data.map((msg) => ({
           id: msg.id,
           title: 'Mensaje del Administrador',
@@ -39,7 +43,7 @@ const MessagesView = () => {
           date: msg.created_at
             ? new Date(msg.created_at).toLocaleDateString()
             : 'Fecha no disponible',
-          sender: msg.sender?.username || 'Administración',
+          sender: 'Administración',
         }));
 
         setMessages(formattedMessages);
@@ -91,7 +95,6 @@ const MessagesView = () => {
         </div>
       )}
 
-      {/* MODAL DEL MENSAJE */}
       {selectedMessage && (
         <div className="message-modal">
           <div className="message-modal-content">
@@ -111,3 +114,4 @@ const MessagesView = () => {
 };
 
 export default MessagesView;
+

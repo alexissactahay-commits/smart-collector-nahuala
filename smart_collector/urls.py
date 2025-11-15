@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
+from core.views import my_notifications_view
+
 
 # Importamos SOLO lo que SÍ existe en views.py
 from core.views import (
@@ -73,6 +75,9 @@ urlpatterns = [
 
     # 🔥 NUEVO — ADMIN: enviar mensajes
     path('api/admin/messages/', send_message_view),
+
+    path('api/my-notifications/', my_notifications_view),
+
 
     # ======================
     #     VEHÍCULO
