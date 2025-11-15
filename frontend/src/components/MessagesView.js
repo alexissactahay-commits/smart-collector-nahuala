@@ -8,31 +8,25 @@ const MessagesView = () => {
   const [loading, setLoading] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState(null);
 
-  // 🔥 Corrige la URL base
-  const RAW_URL = process.env.REACT_APP_API_URL;
-
-  const API_URL = RAW_URL.endsWith('/') 
-    ? `${RAW_URL}api/`
-    : `${RAW_URL}/api/`;
+  // Base URL EXACTA usando tu .env actual
+  // 👉 REACT_APP_API_URL = https://smart-collector.onrender.com
+  const API_URL = `${process.env.REACT_APP_API_URL}/api`;
 
   useEffect(() => {
     const fetchMessages = async () => {
       try {
         const token = localStorage.getItem('token');
-
         if (!token) {
           console.error('Token no encontrado');
           setLoading(false);
           return;
         }
 
-        // 🔥 Ruta corregida
+        // 👉 Ruta correcta para mis notificaciones
         const response = await axios.get(
-          `${API_URL}my-notifications/`,
+          `${API_URL}/my-notifications/`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` }
           }
         );
 
@@ -41,9 +35,9 @@ const MessagesView = () => {
           title: 'Mensaje del Administrador',
           body: msg.message || msg.detalle || 'Mensaje sin contenido',
           date: msg.created_at
-            ? new Date(msg.created_at).toLocaleDateString()
+            ? new Date(msg.created_at).toLocaleString()
             : 'Fecha no disponible',
-          sender: 'Administración',
+          sender: msg.sender?.username || 'Administración',
         }));
 
         setMessages(formattedMessages);
@@ -114,4 +108,5 @@ const MessagesView = () => {
 };
 
 export default MessagesView;
+
 
