@@ -56,26 +56,17 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def login_view(request):
-    """
-    Login por username o email + password.
-    Devuelve tokens JWT válidos para SimpleJWT.
-    """
     identifier = request.data.get("identifier")
     password = request.data.get("password")
 
     if not identifier or not password:
-        return Response(
-            {"error": "Todos los campos son obligatorios."},
-            status=400,
-        )
+        return Response({"error": "Todos los campos son obligatorios."}, status=400)
 
     user = None
     try:
-        # Intentar por email
         user = User.objects.get(email__iexact=identifier)
     except User.DoesNotExist:
         try:
-            # Intentar por username
             user = User.objects.get(username__iexact=identifier)
         except User.DoesNotExist:
             return Response({"error": "Credenciales inválidas."}, status=401)
@@ -83,9 +74,7 @@ def login_view(request):
     if not user.check_password(password):
         return Response({"error": "Credenciales inválidas."}, status=401)
 
-    # Crear refresh + access tokens JWT
     refresh = RefreshToken.for_user(user)
-    # Añadir info extra al payload
     refresh["role"] = user.role
     refresh["username"] = user.username
     refresh["user_id"] = user.id
@@ -115,33 +104,19 @@ def register_view(request):
     role = request.data.get("role", "ciudadano")
 
     if not username or not email or not password:
-        return Response(
-            {"error": "Todos los campos son obligatorios."},
-            status=400,
-        )
+        return Response({"error": "Todos los campos son obligatorios."}, status=400)
 
     if User.objects.filter(email=email).exists():
-        return Response(
-            {"error": "El correo ya está registrado."},
-            status=400,
-        )
+        return Response({"error": "El correo ya está registrado."}, status=400)
 
-    user = User.objects.create_user(
-        username=username,
-        email=email,
-        password=password,
-        role=role,
-    )
+    user = User.objects.create_user(username=username, email=email, password=password, role=role)
 
     if role == "admin":
         user.is_staff = True
         user.is_superuser = True
         user.save()
 
-    return Response(
-        {"message": "Usuario registrado correctamente."},
-        status=201,
-    )
+    return Response({"message": "Usuario registrado correctamente."}, status=201)
 
 
 @api_view(["POST"])
@@ -152,10 +127,7 @@ def change_password(request):
     new_password = request.data.get("new_password")
 
     if not user.check_password(old_password):
-        return Response(
-            {"error": "Contraseña actual incorrecta."},
-            status=400,
-        )
+        return Response({"error": "Contraseña actual incorrecta."}, status=400)
 
     user.set_password(new_password)
     user.save()
@@ -178,9 +150,7 @@ def forgot_password_view(request):
     try:
         user = User.objects.get(email__iexact=email)
     except User.DoesNotExist:
-        return Response(
-            {"message": "Si el correo está registrado, recibirás instrucciones."}
-        )
+        return Response({"message": "Si el correo está registrado, recibirás instrucciones."})
 
     uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
@@ -195,9 +165,7 @@ def forgot_password_view(request):
     reset_url = f"{base_url}/reset-password/{uidb64}/{token}/"
 
     subject = "Restablecimiento de contraseña - Smart Collector"
-    message = render_to_string(
-        "password_reset_email.html", {"user": user, "reset_url": reset_url}
-    )
+    message = render_to_string("password_reset_email.html", {"user": user, "reset_url": reset_url})
 
     send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
 
@@ -215,17 +183,14 @@ def google_login(request):
 
     try:
         idinfo = id_token.verify_oauth2_token(
-            token,
-            google_requests.Request(),
-            getattr(settings, "GOOGLE_CLIENT_ID", ""),
+            token, google_requests.Request(), getattr(settings, "GOOGLE_CLIENT_ID", "")
         )
 
         email = idinfo["email"]
         username = idinfo.get("name", email.split("@")[0])
 
         user, created = User.objects.get_or_create(
-            email=email,
-            defaults={"username": username, "role": "ciudadano"},
+            email=email, defaults={"username": username, "role": "ciudadano"}
         )
 
         if created:
@@ -287,10 +252,7 @@ def vehicle_update(request, vehicle_id):
     longitude = request.data.get("longitude")
 
     if latitude is None or longitude is None:
-        return Response(
-            {"error": "Latitud y longitud requeridas."},
-            status=400,
-        )
+        return Response({"error": "Latitud y longitud requeridas."}, status=400)
 
     vehicle.latitude = latitude
     vehicle.longitude = longitude
@@ -307,9 +269,7 @@ def vehicle_update(request, vehicle_id):
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
 def admin_users_view(request):
-    users = User.objects.all().values(
-        "id", "username", "email", "role", "is_active"
-    )
+    users = User.objects.all().values("id", "username", "email", "role", "is_active")
     return Response(list(users))
 
 
@@ -363,7 +323,7 @@ def admin_routes_view(request):
         serializer = RouteSerializer(routes, many=True)
         return Response(serializer.data)
 
-    elif request.method == "POST":
+    elif request.method == "POST"]:
         serializer = RouteSerializer(data=request.data)
         if serializer.is_valid():
             route = serializer.save()
@@ -377,8 +337,72 @@ def admin_routes_view(request):
                 )
             return Response(serializer.data)
         return Response(serializer.errors)
-    
 
+
+# ====================================
+#   🔥🔥🔥 ADMIN - ENVIAR MENSAJES (NUEVO)
+# ====================================
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAdminUser])
+def send_message_view(request):
+    """
+    GET: Lista de mensajes enviados
+    POST: Enviar mensaje a uno o todos los usuarios
+    """
+
+    # GET - historial de mensajes
+    if request.method == "GET":
+        mensajes = Notification.objects.select_related("usuario").order_by("-created_at")
+        data = [
+            {
+                "id": m.id,
+                "usuario": {
+                    "id": m.usuario.id,
+                    "username": m.usuario.username,
+                    "email": m.usuario.email,
+                }
+                if m.usuario
+                else None,
+                "message": m.message,
+                "estado": m.estado,
+                "created_at": m.created_at,
+            }
+            for m in mensajes
+        ]
+        return Response(data)
+
+    # POST - enviar mensaje
+    if request.method == "POST":
+        message = request.data.get("message")
+        user_id = request.data.get("user_id")  # None → enviar a todos
+
+        if not message:
+            return Response({"error": "El mensaje es obligatorio"}, status=400)
+
+        # Enviar a todos
+        if user_id is None:
+            for user in User.objects.all():
+                Notification.objects.create(
+                    usuario=user,
+                    message=message,
+                    estado="sent",
+                )
+            return Response({"message": "Mensaje enviado a todos los usuarios"}, status=201)
+
+        # Enviar a uno
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "Usuario no encontrado"}, status=404)
+
+        Notification.objects.create(
+            usuario=user,
+            message=message,
+            estado="sent",
+        )
+
+        return Response({"message": "Mensaje enviado correctamente"}, status=201)
 
 
 # ====================================
@@ -400,30 +424,24 @@ def my_routes_view(request):
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def my_reports_view(request):
-    user = request.user  # usuario autenticado
+    user = request.user
 
-    # === GET ===
-    if request.method == "GET":
-        # En el modelo Report el campo de fecha es "fecha", no "created_at"
+    if request.method == "GET"]:
         reports = Report.objects.filter(user=user).order_by("-fecha")
         serializer = ReportSerializer(reports, many=True)
         return Response(serializer.data)
 
-    # === POST ===
-    if request.method == "POST":
+    if request.method == "POST"]:
         detalle = request.data.get("detalle")
         tipo = request.data.get("tipo")
 
         if not detalle:
-            return Response(
-                {"error": "El campo detalle es requerido."},
-                status=400,
-            )
+            return Response({"error": "El campo detalle es requerido."}, status=400)
 
         report = Report.objects.create(
             user=user,
             detalle=detalle,
-            tipo=tipo or "incidencias",  # coincide con los choices del modelo
+            tipo=tipo or "incidencias",
             status="pending",
         )
 
@@ -459,7 +477,7 @@ def dashboard_view(request):
 
 
 # ====================================
-# 📸  NUEVO – SUBIR FOTO DE PERFIL
+# 📸 NUEVO – SUBIR FOTO DE PERFIL
 # ====================================
 
 @api_view(["POST"])
@@ -472,20 +490,13 @@ def upload_profile_picture(request):
 
     image = request.FILES["profile_picture"]
 
-    # Guardar en /media/profile_pics/
     filename = f"profile_pics/user_{user.id}.jpg"
     path = default_storage.save(filename, ContentFile(image.read()))
 
-    # Actualizar el usuario
     user.photo = filename
     user.save()
 
-    # URL completa
     full_url = request.build_absolute_uri(settings.MEDIA_URL + filename)
 
-    return Response(
-        {
-            "message": "Foto actualizada correctamente.",
-            "photo_url": full_url,
-        }
-    )
+    return Response({"message": "Foto actualizada correctamente.", "photo_url": full_url})
+

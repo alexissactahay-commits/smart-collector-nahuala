@@ -12,7 +12,7 @@ from core.views import (
 
     # Ciudadanos
     my_routes_view,
-    my_reports_view,              # 👈 AGREGADO
+    my_reports_view,
 
     # Admin
     admin_users_view,
@@ -20,6 +20,9 @@ from core.views import (
     admin_report_detail_view,
     generate_reports_view,
     admin_routes_view,
+
+    # 🔥 NUEVO - enviar mensajes
+    send_message_view,
 
     # Vehículos
     vehicle_detail,
@@ -57,7 +60,7 @@ urlpatterns = [
     #   CIUDADANO
     # ======================
     path('api/my-routes/', my_routes_view),
-    path('api/my-reports/', my_reports_view),     # 👈 RUTA QUE FALTABA
+    path('api/my-reports/', my_reports_view),
 
     # ======================
     #     ADMIN
@@ -67,6 +70,9 @@ urlpatterns = [
     path('api/admin/reports/<int:pk>/', admin_report_detail_view),
     path('api/admin/reports/generate/', generate_reports_view),
     path('api/admin/routes/', admin_routes_view),
+
+    # 🔥 NUEVO — ADMIN: enviar mensajes
+    path('api/admin/messages/', send_message_view),
 
     # ======================
     #     VEHÍCULO
