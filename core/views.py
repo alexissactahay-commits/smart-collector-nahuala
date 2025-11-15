@@ -3,7 +3,7 @@ from django.shortcuts import render
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.core.mail import send_mail
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
 from django.template.loader import render_to_string
@@ -62,7 +62,6 @@ def login_view(request):
     if not identifier or not password:
         return Response({"error": "Todos los campos son obligatorios."}, status=400)
 
-    user = None
     try:
         user = User.objects.get(email__iexact=identifier)
     except User.DoesNotExist:
@@ -84,15 +83,13 @@ def login_view(request):
     access["username"] = user.username
     access["user_id"] = user.id
 
-    return Response(
-        {
-            "access": str(access),
-            "refresh": str(refresh),
-            "role": user.role,
-            "username": user.username,
-            "user_id": user.id,
-        }
-    )
+    return Response({
+        "access": str(access),
+        "refresh": str(refresh),
+        "role": user.role,
+        "username": user.username,
+        "user_id": user.id,
+    })
 
 
 @api_view(["POST"])
@@ -193,10 +190,6 @@ def google_login(request):
             email=email, defaults={"username": username, "role": "ciudadano"}
         )
 
-        if created:
-            user.set_unusable_password()
-            user.save()
-
         refresh = RefreshToken.for_user(user)
         refresh["role"] = user.role
         refresh["username"] = user.username
@@ -207,15 +200,13 @@ def google_login(request):
         access["username"] = user.username
         access["user_id"] = user.id
 
-        return JsonResponse(
-            {
-                "access": str(access),
-                "refresh": str(refresh),
-                "role": user.role,
-                "username": user.username,
-                "user_id": user.id,
-            }
-        )
+        return JsonResponse({
+            "access": str(access),
+            "refresh": str(refresh),
+            "role": user.role,
+            "username": user.username,
+            "user_id": user.id,
+        })
 
     except Exception:
         return JsonResponse({"error": "Token de Google inválido"}, status=400)
@@ -263,7 +254,7 @@ def vehicle_update(request, vehicle_id):
 
 
 # ====================================
-#   ADMIN
+#   ADMIN - USUARIOS & REPORTES
 # ====================================
 
 @api_view(["GET"])
@@ -299,59 +290,65 @@ def admin_report_detail_view(request, pk):
     return Response({"message": "Reporte actualizado."})
 
 
+# ====================================
+#   ADMIN - GENERAR INFORMES (NUEVO)
+# ====================================
+
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
 def generate_reports_view(request):
-    completed = Route.objects.filter(completed=True).count()
-    pending = Route.objects.filter(completed=False).count()
-    total = Report.objects.count()
+    completed_routes = Route.objects.filter(completed=True).count()
+    pending_routes = Route.objects.filter(completed=False).count()
+    total_reports = Report.objects.count()
+    resolved_reports = Report.objects.filter(status="resolved").count()
+    unresolved_reports = Report.objects.filter(status="unresolved").count()
+    pending_reports = Report.objects.filter(status="pending").count()
 
-    return Response(
-        {
-            "completed_routes": completed,
-            "pending_routes": pending,
-            "total_reports": total,
-        }
-    )
+    # Fecha del primer reporte
+    first_report = Report.objects.order_by("fecha").first()
+    if first_report:
+        days_diff = (timezone.now().date() - first_report.fecha.date()).days
+    else:
+        days_diff = 0
+
+    return Response({
+        "completed_routes": completed_routes,
+        "pending_routes": pending_routes,
+        "total_reports": total_reports,
+        "resolved_reports": resolved_reports,
+        "unresolved_reports": unresolved_reports,
+        "pending_reports": pending_reports,
+        "days_since_first_report": days_diff,
+    })
 
 
-@api_view(["GET", "POST"])
+@api_view(["GET"])
 @permission_classes([IsAdminUser])
-def admin_routes_view(request):
-    if request.method == "GET":
-        routes = Route.objects.prefetch_related("points").order_by("day_of_week")
-        serializer = RouteSerializer(routes, many=True)
-        return Response(serializer.data)
+def generate_reports_pdf_view(request):
+    """
+    Retorna un PDF generado automáticamente.
+    """
+    html = "<h1>Reporte Smart Collector</h1><p>Generado correctamente.</p>"
 
-    elif request.method == "POST":
-        serializer = RouteSerializer(data=request.data)
-        if serializer.is_valid():
-            route = serializer.save()
-            points = request.data.get("points", [])
-            for p in points:
-                RoutePoint.objects.create(
-                    route=route,
-                    latitude=p["latitude"],
-                    longitude=p["longitude"],
-                    order=p.get("order", 0),
-                )
-            return Response(serializer.data)
-        return Response(serializer.errors)
+    from django.template.loader import render_to_string
+    from weasyprint import HTML
+
+    pdf = HTML(string=html).write_pdf()
+
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = "attachment; filename=informe_smart_collector.pdf"
+
+    return response
 
 
 # ====================================
-#   🔥🔥🔥 ADMIN - ENVIAR MENSAJES (NUEVO)
+#   ADMIN - ENVIAR MENSAJES
 # ====================================
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAdminUser])
 def send_message_view(request):
-    """
-    GET: Lista de mensajes enviados
-    POST: Enviar mensaje a uno o todos los usuarios
-    """
 
-    # GET - historial de mensajes
     if request.method == "GET":
         mensajes = Notification.objects.select_related("usuario").order_by("-created_at")
         data = [
@@ -361,9 +358,7 @@ def send_message_view(request):
                     "id": m.usuario.id,
                     "username": m.usuario.username,
                     "email": m.usuario.email,
-                }
-                if m.usuario
-                else None,
+                } if m.usuario else None,
                 "message": m.message,
                 "estado": m.estado,
                 "created_at": m.created_at,
@@ -372,15 +367,13 @@ def send_message_view(request):
         ]
         return Response(data)
 
-    # POST - enviar mensaje
     if request.method == "POST":
         message = request.data.get("message")
-        user_id = request.data.get("user_id")  # None → enviar a todos
+        user_id = request.data.get("user_id")
 
         if not message:
             return Response({"error": "El mensaje es obligatorio"}, status=400)
 
-        # Enviar a todos
         if user_id is None:
             for user in User.objects.all():
                 Notification.objects.create(
@@ -390,7 +383,6 @@ def send_message_view(request):
                 )
             return Response({"message": "Mensaje enviado a todos los usuarios"}, status=201)
 
-        # Enviar a uno
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
@@ -418,7 +410,7 @@ def my_routes_view(request):
 
 
 # ====================================
-#   REPORTES – CIUDADANO
+#   CIUDADANO – REPORTES
 # ====================================
 
 @api_view(["GET", "POST"])
@@ -477,7 +469,7 @@ def dashboard_view(request):
 
 
 # ====================================
-# 📸 NUEVO – SUBIR FOTO DE PERFIL
+#   SUBIR FOTO DE PERFIL
 # ====================================
 
 @api_view(["POST"])
@@ -498,7 +490,11 @@ def upload_profile_picture(request):
 
     full_url = request.build_absolute_uri(settings.MEDIA_URL + filename)
 
-    return Response({"message": "Foto actualizada correctamente.", "photo_url": full_url})
+    return Response({
+        "message": "Foto actualizada correctamente.",
+        "photo_url": full_url,
+    })
+
 
 # ====================================
 #   CIUDADANO – NOTIFICACIONES
@@ -522,3 +518,4 @@ def my_notifications_view(request):
     ]
 
     return Response(data)
+

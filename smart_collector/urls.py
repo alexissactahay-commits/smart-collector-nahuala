@@ -2,19 +2,19 @@ from django.contrib import admin
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
-from core.views import my_notifications_view
 
-
-# Importamos SOLO lo que SÍ existe en views.py
+# Importar vistas existentes
 from core.views import (
+    # AUTH
     login_view,
     register_view,
     change_password,
     forgot_password_view,
 
-    # Ciudadanos
+    # Ciudadano
     my_routes_view,
     my_reports_view,
+    my_notifications_view,   # 👈 YA IMPORTADO CORRECTAMENTE
 
     # Admin
     admin_users_view,
@@ -22,21 +22,18 @@ from core.views import (
     admin_report_detail_view,
     generate_reports_view,
     admin_routes_view,
-
-    # 🔥 NUEVO - enviar mensajes
-    send_message_view,
+    send_message_view,        # 👈 NUEVO CORRECTO
 
     # Vehículos
     vehicle_detail,
     vehicle_update,
 
-    # Home
+    # Home / Dashboard
     home_view,
     dashboard_view,
 
+    # Otros
     create_default_vehicle,
-
-    # Subir foto de perfil
     upload_profile_picture,
 )
 
@@ -63,6 +60,7 @@ urlpatterns = [
     # ======================
     path('api/my-routes/', my_routes_view),
     path('api/my-reports/', my_reports_view),
+    path('api/my-notifications/', my_notifications_view),   # 👈 CORRECTA
 
     # ======================
     #     ADMIN
@@ -73,11 +71,8 @@ urlpatterns = [
     path('api/admin/reports/generate/', generate_reports_view),
     path('api/admin/routes/', admin_routes_view),
 
-    # 🔥 NUEVO — ADMIN: enviar mensajes
+    # 🔥 NUEVO — enviar mensajes del administrador
     path('api/admin/messages/', send_message_view),
-
-    path('api/my-notifications/', my_notifications_view),
-
 
     # ======================
     #     VEHÍCULO
@@ -99,3 +94,4 @@ urlpatterns = [
 # ========================================
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

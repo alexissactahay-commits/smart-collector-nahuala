@@ -7,9 +7,11 @@ const GenerateReports = () => {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = process.env.REACT_APP_API_URL; // 👈 URL centralizada (Render)
+  const API_URL = process.env.REACT_APP_API_URL; // 👈 URL base: https://smart-collector.onrender.com/api
 
+  // ============================
   // Cargar datos del informe
+  // ============================
   const fetchReportData = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -20,6 +22,7 @@ const GenerateReports = () => {
         return;
       }
 
+      // 👇 RUTA CORREGIDA (SIN /api extra)
       const res = await axios.get(`${API_URL}/admin/reports/generate/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -41,7 +44,9 @@ const GenerateReports = () => {
     }
   };
 
-  // Descargar PDF generado por el backend
+  // ============================
+  // Descargar PDF
+  // ============================
   const generatePDF = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -50,6 +55,7 @@ const GenerateReports = () => {
         throw new Error("No token found");
       }
 
+      // 👇 RUTA CORREGIDA
       const response = await axios.get(
         `${API_URL}/admin/reports/generate-pdf/`,
         {
@@ -57,11 +63,11 @@ const GenerateReports = () => {
             Authorization: `Bearer ${token}`,
             Accept: "application/pdf"
           },
-          responseType: "blob" // Importante para PDF
+          responseType: "blob" // necesario para PDF
         }
       );
 
-      // Crear enlace y descargar
+      // Crear enlace para descarga
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -153,3 +159,4 @@ const GenerateReports = () => {
 };
 
 export default GenerateReports;
+
