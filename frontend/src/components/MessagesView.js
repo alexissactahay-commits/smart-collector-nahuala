@@ -1,4 +1,3 @@
-// MessagesView.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './MessagesView.css';
@@ -8,26 +7,22 @@ const MessagesView = () => {
   const [loading, setLoading] = useState(true);
   const [selectedMessage, setSelectedMessage] = useState(null);
 
-  // Base URL EXACTA usando tu .env actual
-  // 👉 REACT_APP_API_URL = https://smart-collector.onrender.com
-  const API_URL = `${process.env.REACT_APP_API_URL}/api`;
+  // NORMALIZAMOS LA URL PARA EVITAR /api/api Y ///
+  let API_URL = process.env.REACT_APP_API_URL;
+  API_URL = API_URL.replace(/\/+$/, "");
+  if (!API_URL.endsWith("/api")) {
+    API_URL = `${API_URL}/api`;
+  }
 
   useEffect(() => {
     const fetchMessages = async () => {
       try {
         const token = localStorage.getItem('token');
-        if (!token) {
-          console.error('Token no encontrado');
-          setLoading(false);
-          return;
-        }
+        if (!token) return setLoading(false);
 
-        // 👉 Ruta correcta para mis notificaciones
         const response = await axios.get(
           `${API_URL}/my-notifications/`,
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
 
         const formattedMessages = response.data.map((msg) => ({
@@ -51,14 +46,6 @@ const MessagesView = () => {
     fetchMessages();
   }, [API_URL]);
 
-  const handleOpenMessage = (message) => {
-    setSelectedMessage(message);
-  };
-
-  const handleCloseMessage = () => {
-    setSelectedMessage(null);
-  };
-
   return (
     <div className="messages-container">
       <h2>Mensajes Oficiales - Smart Collector</h2>
@@ -71,16 +58,11 @@ const MessagesView = () => {
             <p className="no-messages">No hay mensajes nuevos.</p>
           ) : (
             messages.map((message) => (
-              <div
-                key={message.id}
-                className="message-card"
-                onClick={() => handleOpenMessage(message)}
-              >
+              <div key={message.id} className="message-card">
                 <div className="message-header">
                   <h3>{message.title}</h3>
                   <span className="message-date">{message.date}</span>
                 </div>
-
                 <p className="message-body">{message.body}</p>
                 <p className="message-sender">— {message.sender}</p>
               </div>
@@ -88,25 +70,11 @@ const MessagesView = () => {
           )}
         </div>
       )}
-
-      {selectedMessage && (
-        <div className="message-modal">
-          <div className="message-modal-content">
-            <button className="close-btn" onClick={handleCloseMessage}>
-              ×
-            </button>
-
-            <h3>{selectedMessage.title}</h3>
-            <p className="message-body-modal">{selectedMessage.body}</p>
-            <p className="message-sender-modal">— {selectedMessage.sender}</p>
-            <p className="message-date-modal">Fecha: {selectedMessage.date}</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
 export default MessagesView;
+
 
 
