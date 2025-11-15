@@ -323,7 +323,7 @@ def admin_routes_view(request):
         serializer = RouteSerializer(routes, many=True)
         return Response(serializer.data)
 
-    elif request.method == "POST"]:
+    elif request.method == "POST":
         serializer = RouteSerializer(data=request.data)
         if serializer.is_valid():
             route = serializer.save()
@@ -426,12 +426,12 @@ def my_routes_view(request):
 def my_reports_view(request):
     user = request.user
 
-    if request.method == "GET"]:
+    if request.method == "GET":
         reports = Report.objects.filter(user=user).order_by("-fecha")
         serializer = ReportSerializer(reports, many=True)
         return Response(serializer.data)
 
-    if request.method == "POST"]:
+    if request.method == "POST":
         detalle = request.data.get("detalle")
         tipo = request.data.get("tipo")
 
