@@ -254,7 +254,7 @@ def vehicle_update(request, vehicle_id):
 
 
 # ====================================
-#   ADMIN - USUARIOS & REPORTES
+#   ADMIN – USUARIOS Y REPORTES
 # ====================================
 
 @api_view(["GET"])
@@ -291,7 +291,40 @@ def admin_report_detail_view(request, pk):
 
 
 # ====================================
-#   ADMIN - GENERAR INFORMES (NUEVO)
+#   ADMIN – RUTAS (🔥 FALTABA ESTA - ERROR EN RENDER)
+# ====================================
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAdminUser])
+def admin_routes_view(request):
+
+    if request.method == "GET":
+        routes = Route.objects.prefetch_related("points").order_by("day_of_week")
+        serializer = RouteSerializer(routes, many=True)
+        return Response(serializer.data)
+
+    if request.method == "POST":
+        serializer = RouteSerializer(data=request.data)
+
+        if serializer.is_valid():
+            route = serializer.save()
+
+            points = request.data.get("points", [])
+            for p in points:
+                RoutePoint.objects.create(
+                    route=route,
+                    latitude=p["latitude"],
+                    longitude=p["longitude"],
+                    order=p.get("order", 0),
+                )
+
+            return Response(serializer.data, status=201)
+
+        return Response(serializer.errors, status=400)
+
+
+# ====================================
+#   ADMIN – GENERAR INFORMES (NUEVO)
 # ====================================
 
 @api_view(["GET"])
@@ -325,9 +358,6 @@ def generate_reports_view(request):
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
 def generate_reports_pdf_view(request):
-    """
-    Retorna un PDF generado automáticamente.
-    """
     html = "<h1>Reporte Smart Collector</h1><p>Generado correctamente.</p>"
 
     from django.template.loader import render_to_string
@@ -342,7 +372,7 @@ def generate_reports_pdf_view(request):
 
 
 # ====================================
-#   ADMIN - ENVIAR MENSAJES
+#   ADMIN – ENVIAR MENSAJES
 # ====================================
 
 @api_view(["GET", "POST"])
@@ -518,4 +548,3 @@ def my_notifications_view(request):
     ]
 
     return Response(data)
-
