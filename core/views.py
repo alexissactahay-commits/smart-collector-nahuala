@@ -555,3 +555,24 @@ def my_notifications_view(request):
 
     return Response(data, status=200)
 
+
+# ====================================
+#   🚀 FUNCIÓN EXTRA PARA RENDER — GENERAR REPORTES
+# ====================================
+
+@api_view(["GET"])
+@permission_classes([IsAdminUser])
+def generate_reports_view(request):
+    """
+    Esta función existe para evitar errores en Render.
+    Retorna todos los reportes generados en el sistema.
+    """
+    reports = Report.objects.select_related("user").order_by("-fecha")
+    serializer = ReportSerializer(reports, many=True)
+    return Response({
+        "message": "Reporte general generado correctamente.",
+        "total": len(serializer.data),
+        "reports": serializer.data
+    }, status=200)
+
+
