@@ -291,7 +291,7 @@ def admin_report_detail_view(request, pk):
 
 
 # ====================================
-#   ADMIN – RUTAS (🔥 FALTABA ESTA - ERROR EN RENDER)
+#   ADMIN – RUTAS
 # ====================================
 
 @api_view(["GET", "POST"])
@@ -324,7 +324,7 @@ def admin_routes_view(request):
 
 
 # ====================================
-#   ADMIN – GENERAR INFORMES (NUEVO)
+#   ADMIN – GENERAR INFORMES
 # ====================================
 
 @api_view(["GET"])
@@ -337,7 +337,6 @@ def generate_reports_view(request):
     unresolved_reports = Report.objects.filter(status="unresolved").count()
     pending_reports = Report.objects.filter(status="pending").count()
 
-    # Fecha del primer reporte
     first_report = Report.objects.order_by("fecha").first()
     if first_report:
         days_diff = (timezone.now().date() - first_report.fecha.date()).days
@@ -355,18 +354,50 @@ def generate_reports_view(request):
     })
 
 
+# ====================================
+#   ADMIN – GENERAR PDF (CON REPORTLAB)
+# ====================================
+
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
 def generate_reports_pdf_view(request):
-    html = "<h1>Reporte Smart Collector</h1><p>Generado correctamente.</p>"
 
-    from django.template.loader import render_to_string
-    from weasyprint import HTML
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+    from io import BytesIO
 
-    pdf = HTML(string=html).write_pdf()
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=letter)
 
-    response = HttpResponse(pdf, content_type="application/pdf")
-    response["Content-Disposition"] = "attachment; filename=informe_smart_collector.pdf"
+    # Título
+    pdf.setFont("Helvetica-Bold", 18)
+    pdf.drawString(50, 750, "Reporte General - Smart Collector")
+
+    pdf.setFont("Helvetica", 12)
+
+    pdf.drawString(50, 720, f"Rutas completadas: {Route.objects.filter(completed=True).count()}")
+    pdf.drawString(50, 700, f"Rutas pendientes: {Route.objects.filter(completed=False).count()}")
+
+    pdf.drawString(50, 670, f"Reportes recibidos: {Report.objects.count()}")
+    pdf.drawString(50, 650, f"Resueltos: {Report.objects.filter(status='resolved').count()}")
+    pdf.drawString(50, 630, f"No solucionados: {Report.objects.filter(status='unresolved').count()}")
+    pdf.drawString(50, 610, f"Pendientes: {Report.objects.filter(status='pending').count()}")
+
+    first_report = Report.objects.order_by("fecha").first()
+    if first_report:
+        days_diff = (timezone.now().date() - first_report.fecha.date()).days
+    else:
+        days_diff = 0
+
+    pdf.drawString(50, 580, f"Días desde el primer reporte: {days_diff}")
+
+    pdf.showPage()
+    pdf.save()
+
+    buffer.seek(0)
+
+    response = HttpResponse(buffer, content_type="application/pdf")
+    response["Content-Disposition"] = "attachment; filename=reporte_smart_collector.pdf"
 
     return response
 
@@ -499,7 +530,7 @@ def dashboard_view(request):
 
 
 # ====================================
-#   SUBIR FOTO DE PERFIL
+#   SUBIR FOTO
 # ====================================
 
 @api_view(["POST"])
@@ -527,7 +558,7 @@ def upload_profile_picture(request):
 
 
 # ====================================
-#   CIUDADANO – NOTIFICACIONES
+#   NOTIFICACIONES CIUDADANO
 # ====================================
 
 @api_view(["GET"])

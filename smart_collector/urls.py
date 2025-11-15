@@ -21,7 +21,7 @@ from core.views import (
     admin_reports_view,
     admin_report_detail_view,
     generate_reports_view,
-    generate_reports_pdf_view,   # 🔥 AGREGADO
+    generate_reports_pdf_view,   # 🔥 NECESARIO PARA PDF
     admin_routes_view,
     send_message_view,
 
@@ -70,15 +70,16 @@ urlpatterns = [
     path('api/admin/reports/', admin_reports_view),
     path('api/admin/reports/<int:pk>/', admin_report_detail_view),
 
-    # 🔥 GENERAR INFORME (JSON)
+    # 🔥 **GENERAR INFORME JSON**
     path('api/admin/reports/generate/', generate_reports_view),
 
-    # 🔥 GENERAR PDF (NUEVO — RUTA QUE FALTABA)
+    # 🔥 **GENERAR PDF (FUNCIONA CON REPORTLAB)**
     path('api/admin/reports/generate-pdf/', generate_reports_pdf_view),
 
+    # 🔥 ADMIN — RUTAS
     path('api/admin/routes/', admin_routes_view),
 
-    # 🔥 NUEVO — enviar mensajes del administrador
+    # 🔥 NUEVO — mensajes del admin
     path('api/admin/messages/', send_message_view),
 
     # ======================
@@ -101,5 +102,3 @@ urlpatterns = [
 # ========================================
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-
