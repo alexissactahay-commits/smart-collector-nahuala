@@ -7,11 +7,9 @@ const GenerateReports = () => {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = process.env.REACT_APP_API_URL; // 👈 URL base: https://smart-collector.onrender.com/api
+  const API_URL = process.env.REACT_APP_API_URL; // Render base URL
 
-  // ============================
   // Cargar datos del informe
-  // ============================
   const fetchReportData = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -22,12 +20,16 @@ const GenerateReports = () => {
         return;
       }
 
-      // 👇 RUTA CORREGIDA (SIN /api extra)
-      const res = await axios.get(`${API_URL}/admin/reports/generate/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // 🔥 RUTA CORREGIDA
+      const res = await axios.get(
+        `${API_URL}/api/admin/reports/generate/`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
 
       setReportData(res.data);
+
     } catch (err) {
       console.error("Error al cargar informe:", err);
 
@@ -44,30 +46,22 @@ const GenerateReports = () => {
     }
   };
 
-  // ============================
   // Descargar PDF
-  // ============================
   const generatePDF = async () => {
     try {
       const token = localStorage.getItem("token");
 
-      if (!token) {
-        throw new Error("No token found");
-      }
-
-      // 👇 RUTA CORREGIDA
       const response = await axios.get(
-        `${API_URL}/admin/reports/generate-pdf/`,
+        `${API_URL}/api/admin/reports/generate-pdf/`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "application/pdf"
           },
-          responseType: "blob" // necesario para PDF
+          responseType: "blob"
         }
       );
 
-      // Crear enlace para descarga
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -79,15 +73,7 @@ const GenerateReports = () => {
 
     } catch (error) {
       console.error("Error al generar PDF:", error);
-
-      if (error.response?.status === 401) {
-        alert("Tu sesión expiró. Inicia sesión nuevamente.");
-        localStorage.removeItem("token");
-        localStorage.removeItem("userRole");
-        window.location.href = "/login";
-      } else {
-        alert("Error generando el PDF.");
-      }
+      alert("Error generando el PDF.");
     }
   };
 
@@ -146,7 +132,7 @@ const GenerateReports = () => {
       <div className="actions">
         <button
           onClick={() =>
-            window.open(reportData.power_bi_link.trim(), "_blank")
+            window.open(reportData.power_bi_link?.trim(), "_blank")
           }
         >
           Ver en Power BI
@@ -159,4 +145,5 @@ const GenerateReports = () => {
 };
 
 export default GenerateReports;
+
 
