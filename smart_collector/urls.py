@@ -14,15 +14,16 @@ from core.views import (
     # Ciudadano
     my_routes_view,
     my_reports_view,
-    my_notifications_view,   # 👈 YA IMPORTADO CORRECTAMENTE
+    my_notifications_view,
 
     # Admin
     admin_users_view,
     admin_reports_view,
     admin_report_detail_view,
     generate_reports_view,
+    generate_reports_pdf_view,   # 🔥 AGREGADO
     admin_routes_view,
-    send_message_view,        # 👈 NUEVO CORRECTO
+    send_message_view,
 
     # Vehículos
     vehicle_detail,
@@ -60,7 +61,7 @@ urlpatterns = [
     # ======================
     path('api/my-routes/', my_routes_view),
     path('api/my-reports/', my_reports_view),
-    path('api/my-notifications/', my_notifications_view),   # 👈 CORRECTA
+    path('api/my-notifications/', my_notifications_view),
 
     # ======================
     #     ADMIN
@@ -68,7 +69,13 @@ urlpatterns = [
     path('api/admin/users/', admin_users_view),
     path('api/admin/reports/', admin_reports_view),
     path('api/admin/reports/<int:pk>/', admin_report_detail_view),
+
+    # 🔥 GENERAR INFORME (JSON)
     path('api/admin/reports/generate/', generate_reports_view),
+
+    # 🔥 GENERAR PDF (NUEVO — RUTA QUE FALTABA)
+    path('api/admin/reports/generate-pdf/', generate_reports_pdf_view),
+
     path('api/admin/routes/', admin_routes_view),
 
     # 🔥 NUEVO — enviar mensajes del administrador
@@ -94,4 +101,5 @@ urlpatterns = [
 # ========================================
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
 
