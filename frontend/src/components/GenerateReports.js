@@ -8,10 +8,20 @@ const GenerateReports = () => {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔥 BASE URL SIN /api
-  const BASE_URL = process.env.REACT_APP_API_URL;
+  // 🔥 Normalizamos URL como en MessagesView.js
+  let API_URL = process.env.REACT_APP_API_URL || "";
 
-  // Función para obtener datos del informe
+  // quitar / finales
+  API_URL = API_URL.replace(/\/+$/, "");
+
+  // agregar /api si falta
+  if (!API_URL.endsWith("/api")) {
+    API_URL = `${API_URL}/api`;
+  }
+
+  // --------------------------
+  // FETCH REPORT SUMMARY
+  // --------------------------
   const fetchReportData = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -22,9 +32,8 @@ const GenerateReports = () => {
         return;
       }
 
-      // 🔥 RUTA CORRECTA
       const res = await axios.get(
-        `${BASE_URL}/api/admin/reports/generate/`,
+        `${API_URL}/admin/reports/generate/`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -40,13 +49,15 @@ const GenerateReports = () => {
     }
   };
 
-  // Descargar PDF
+  // --------------------------
+  // GENERAR PDF
+  // --------------------------
   const generatePDF = async () => {
     try {
       const token = localStorage.getItem("token");
 
       const response = await axios.get(
-        `${BASE_URL}/api/admin/reports/generate-pdf/`,
+        `${API_URL}/admin/reports/generate-pdf/`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -76,6 +87,10 @@ const GenerateReports = () => {
   useEffect(() => {
     fetchReportData();
   }, []);
+
+  // --------------------------
+  // UI
+  // --------------------------
 
   if (loading) {
     return <div className="generate-reports-container">Cargando informe...</div>;
@@ -127,7 +142,7 @@ const GenerateReports = () => {
 
       <div className="actions">
         <button
-          onClick={() => window.open(reportData.power_bi_link.trim(), "_blank")}
+          onClick={() => window.open(reportData.power_bi_link?.trim(), "_blank")}
         >
           Ver en Power BI
         </button>
@@ -139,5 +154,6 @@ const GenerateReports = () => {
 };
 
 export default GenerateReports;
+
 
 
