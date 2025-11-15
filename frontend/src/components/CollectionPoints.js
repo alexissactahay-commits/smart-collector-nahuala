@@ -4,7 +4,20 @@ import axios from "axios";
 import "./CollectionPoints.css";
 
 const CollectionPoints = () => {
-  const API_URL = process.env.REACT_APP_API_URL;
+
+  // ================================
+  // NORMALIZAR API_URL (SOLUCIÓN)
+  // ================================
+  let API_URL = process.env.REACT_APP_API_URL || "";
+
+  // Quitar slashes finales
+  API_URL = API_URL.replace(/\/+$/, "");
+
+  // Agregar /api si no lo tiene
+  if (!API_URL.endsWith("/api")) {
+    API_URL = `${API_URL}/api`;
+  }
+  // ================================
 
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +37,7 @@ const CollectionPoints = () => {
         return;
       }
 
+      // 🔥 URL YA CORREGIDA
       const res = await axios.get(`${API_URL}/admin/routes/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -72,8 +86,7 @@ const CollectionPoints = () => {
               </h3>
 
               <p>
-                <strong>Horario:</strong> {route.start_time} -{" "}
-                {route.end_time}
+                <strong>Horario:</strong> {route.start_time} - {route.end_time}
               </p>
 
               <p>

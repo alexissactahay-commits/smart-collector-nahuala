@@ -34,7 +34,6 @@ from .serializers import (
     VehicleSerializer
 )
 
-
 # ====================================
 #   LOGIN Y REGISTRO
 # ====================================
@@ -355,7 +354,7 @@ def generate_reports_view(request):
 
 
 # ====================================
-#   ADMIN – GENERAR PDF (CON REPORTLAB)
+#   ADMIN – GENERAR PDF (FINAL)
 # ====================================
 
 @api_view(["GET"])
@@ -369,7 +368,6 @@ def generate_reports_pdf_view(request):
     buffer = BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=letter)
 
-    # Título
     pdf.setFont("Helvetica-Bold", 18)
     pdf.drawString(50, 750, "Reporte General - Smart Collector")
 
@@ -396,8 +394,8 @@ def generate_reports_pdf_view(request):
 
     buffer.seek(0)
 
-    response = HttpResponse(buffer, content_type="application/pdf")
-    response["Content-Disposition"] = "attachment; filename=reporte_smart_collector.pdf"
+    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="reporte_smart_collector.pdf"'
 
     return response
 
@@ -579,3 +577,4 @@ def my_notifications_view(request):
     ]
 
     return Response(data)
+

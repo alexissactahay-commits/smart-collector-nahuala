@@ -76,7 +76,7 @@ urlpatterns = [
     # 🔥 **GENERAR PDF (FUNCIONA CON REPORTLAB)**
     path('api/admin/reports/generate-pdf/', generate_reports_pdf_view),
 
-    # 🔥 ADMIN — RUTAS
+    # 🔥 ADMIN — RUTAS (USADO POR CollectionPoints)
     path('api/admin/routes/', admin_routes_view),
 
     # 🔥 NUEVO — mensajes del admin
