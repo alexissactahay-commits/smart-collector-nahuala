@@ -1,0 +1,100 @@
+.arc-container {
+  padding: 18px;
+}
+
+.arc-card {
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 12px;
+}
+
+.arc-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.arc-input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #d8d8d8;
+  border-radius: 8px;
+}
+
+.arc-select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d8d8d8;
+  border-radius: 8px;
+}
+
+.arc-btn {
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.arc-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.arc-btn.secondary {
+  background: #e9eefc;
+}
+
+.arc-btn.danger {
+  background: #ffe3e3;
+}
+
+.arc-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+}
+
+.arc-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.arc-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.arc-muted {
+  color: #777;
+  margin-top: 8px;
+}
+
+.arc-alert {
+  padding: 10px;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.arc-alert.success {
+  background: #e7ffe7;
+  border: 1px solid #b6f0b6;
+}
+
+.arc-alert.error {
+  background: #ffeaea;
+  border: 1px solid #ffbdbd;
+}
+
+.arc-alert.info {
+  background: #eef6ff;
+  border: 1px solid #cfe4ff;
+}

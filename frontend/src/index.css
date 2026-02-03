@@ -1,3 +1,10 @@
+/* ================================
+   BASE
+   ================================ */
+html, body, #root {
+  height: 100%;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -5,8 +12,89 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  background-color: #f4f6f9;
 }
 
+/* ================================
+   CONTENEDOR PRINCIPAL
+   ================================ */
+#root {
+  position: relative;
+  min-height: 100%;
+}
+
+/* ================================
+   LOGO INSTITUCIONAL FIJO (ESQUINA)
+   DOBLE TAMAÑO – OPCIÓN 3
+   ================================ */
+.app-watermark {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+
+  width: 220px;      /* ⬅️ DOBLE tamaño */
+  height: 220px;     /* ⬅️ DOBLE tamaño */
+
+  background-image: url("./assets/logo-nahuala.PNG");
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+
+  opacity: 0.35;        /* elegante, no molesta */
+  pointer-events: none; /* no bloquea clics */
+  z-index: 10;
+}
+
+/* ================================
+   PLACA INSTITUCIONAL
+   TEXTO ADMINISTRACIÓN
+   ================================ */
+.app-footer-badge {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+
+  padding: 10px 16px;
+  border-radius: 14px;
+
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: rgba(0, 0, 0, 0.75);
+
+  pointer-events: none;
+  z-index: 11;
+}
+
+/* Punto institucional */
+.app-footer-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(0, 123, 255, 0.85);
+}
+
+/* Resalte del texto principal */
+.app-footer-badge span {
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.9);
+}
+
+/* ================================
+   FUENTE CÓDIGO
+   ================================ */
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;

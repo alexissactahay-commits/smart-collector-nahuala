@@ -1,5 +1,5 @@
 import requests
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.core.mail import send_mail
@@ -9,7 +9,10 @@ from django.contrib.auth.tokens import default_token_generator
 from django.template.loader import render_to_string
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework.decorators import api_view, permission_classes
+
+# ✅✅✅ FIX PDF: agregar renderer_classes
+from rest_framework.decorators import api_view, permission_classes, renderer_classes
+
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from django.contrib.auth import update_session_auth_hash
@@ -24,17 +27,24 @@ from django.core.files.base import ContentFile
 from reportlab.pdfgen import canvas
 from io import BytesIO
 
+# ✅✅✅ FIX PDF: BaseRenderer para evitar 406 Accept header
+from rest_framework.renderers import BaseRenderer
+
+# ✅✅✅ FIX: para parsear HH:MM a time y evitar 500
+from datetime import datetime
+
 # MODELOS
 from .models import (
     Route, RoutePoint, Notification, Report, User,
-    RouteDate, RouteSchedule, Vehicle
+    RouteDate, RouteSchedule, Vehicle,
+    Community, RouteCommunity
 )
 
 # SERIALIZERS
 from .serializers import (
     RouteSerializer, NotificationSerializer, ReportSerializer,
     UserSerializer, RouteDateSerializer, RouteScheduleSerializer,
-    VehicleSerializer
+    VehicleSerializer, CommunitySerializer, RouteCommunitySerializer
 )
 
 # ====================================
@@ -297,7 +307,8 @@ def admin_report_detail_view(request, pk):
 def admin_routes_view(request):
 
     if request.method == "GET":
-        routes = Route.objects.prefetch_related("points").order_by("day_of_week")
+        # ⚠️ No depender de day_of_week, pero lo dejamos por compatibilidad
+        routes = Route.objects.prefetch_related("points").order_by("id")
         serializer = RouteSerializer(routes, many=True)
         return Response(serializer.data)
 
@@ -308,17 +319,58 @@ def admin_routes_view(request):
             route = serializer.save()
 
             points = request.data.get("points", [])
-            for p in points:
-                RoutePoint.objects.create(
-                    route=route,
-                    latitude=p["latitude"],
-                    longitude=p["longitude"],
-                    order=p.get("order", 0),
-                )
+            if isinstance(points, list):
+                for idx, p in enumerate(points):
+                    RoutePoint.objects.create(
+                        route=route,
+                        latitude=p.get("latitude"),
+                        longitude=p.get("longitude"),
+                        order=p.get("order", idx),
+                    )
 
-            return Response(serializer.data, status=201)
+            return Response(RouteSerializer(route).data, status=201)
 
         return Response(serializer.errors, status=400)
+
+
+@api_view(["GET", "PUT", "PATCH", "DELETE"])
+@permission_classes([IsAdminUser])
+def admin_route_detail_view(request, pk):
+
+    route = get_object_or_404(Route.objects.prefetch_related("points"), pk=pk)
+
+    if request.method == "GET":
+        return Response(RouteSerializer(route).data, status=200)
+
+    if request.method in ["PUT", "PATCH"]:
+        partial = request.method == "PATCH"
+
+        serializer = RouteSerializer(route, data=request.data, partial=partial)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+
+        route = serializer.save()
+
+        points = request.data.get("points", None)
+        if points is not None:
+            if not isinstance(points, list):
+                return Response({"points": "Debe ser una lista."}, status=400)
+
+            RoutePoint.objects.filter(route=route).delete()
+            for idx, p in enumerate(points):
+                RoutePoint.objects.create(
+                    route=route,
+                    latitude=p.get("latitude"),
+                    longitude=p.get("longitude"),
+                    order=p.get("order", idx),
+                )
+
+        return Response(RouteSerializer(route).data, status=200)
+
+    if request.method == "DELETE":
+        route.delete()
+        return Response({"message": "Ruta eliminada correctamente."}, status=200)
+
 
 # =====================================================
 #   🚀 ADMIN – FECHAS DE RUTAS
@@ -330,19 +382,9 @@ def admin_route_dates_view(request):
 
     if request.method == "GET":
         fechas = RouteDate.objects.select_related("route").order_by("date")
-        data = [
-            {
-                "id": f.id,
-                "date": f.date,
-                "route": {
-                        "id": f.route.id,
-                        "name": f.route.name,
-                        "day_of_week": f.route.day_of_week,
-                }
-            }
-            for f in fechas
-        ]
-        return Response(data, status=200)
+        # ✅ usar serializer (ya incluye route embebida)
+        serializer = RouteDateSerializer(fechas, many=True)
+        return Response(serializer.data, status=200)
 
     if request.method == "POST":
         route_id = request.data.get("route_id")
@@ -356,17 +398,17 @@ def admin_route_dates_view(request):
         except Route.DoesNotExist:
             return Response({"error": "Ruta no encontrada"}, status=404)
 
+        # ✅ evitar duplicado por unique_together (route, date)
+        if RouteDate.objects.filter(route=route, date=date).exists():
+            return Response({"error": "Esa fecha ya está asignada a esta ruta."}, status=400)
+
         nueva_fecha = RouteDate.objects.create(
             route=route,
             date=date
         )
 
-        return Response({
-            "message": "Fecha agregada correctamente",
-            "id": nueva_fecha.id,
-            "date": nueva_fecha.date,
-            "route_id": route_id
-        }, status=201)
+        return Response(RouteDateSerializer(nueva_fecha).data, status=201)
+
 
 # =====================================================
 #   🚀 ADMIN – HORARIOS DE RUTAS
@@ -377,50 +419,46 @@ def admin_route_dates_view(request):
 def admin_route_schedules_view(request):
 
     if request.method == "GET":
-        horarios = RouteSchedule.objects.select_related("route").order_by("day_of_week", "start_time")
+        horarios = RouteSchedule.objects.select_related("route").order_by("id")
+        serializer = RouteScheduleSerializer(horarios, many=True)
+        return Response(serializer.data, status=200)
 
-        data = [
-            {
-                "id": h.id,
-                "day_of_week": h.day_of_week,
-                "start_time": h.start_time,
-                "end_time": h.end_time,
-                "route": {
-                    "id": h.route.id,
-                    "name": h.route.name,
-                    "day_of_week": h.route.day_of_week
-                }
-            }
-            for h in horarios
-        ]
+    payload = request.data.copy()
 
-        return Response(data, status=200)
+    route_val = payload.get("route_id", None)
+    if route_val is None:
+        route_val = payload.get("route", None)
 
-    if request.method == "POST":
-        route_id = request.data.get("route")
-        day_of_week = request.data.get("day_of_week")
-        start_time = request.data.get("start_time")
-        end_time = request.data.get("end_time")
+    if isinstance(route_val, dict):
+        route_val = route_val.get("id")
 
-        if not route_id or not day_of_week or not start_time or not end_time:
-            return Response({"error": "Todos los campos son obligatorios"}, status=400)
+    if route_val is not None:
+        payload["route_id"] = route_val
 
-        try:
-            route = Route.objects.get(id=route_id)
-        except Route.DoesNotExist:
-            return Response({"error": "Ruta no encontrada"}, status=404)
+    def _parse_time(value):
+        if value is None:
+            return None
+        if hasattr(value, "hour"):
+            return value
+        s = str(value).strip()
+        if not s:
+            return None
+        for fmt in ("%H:%M:%S", "%H:%M"):
+            try:
+                return datetime.strptime(s, fmt).time()
+            except ValueError:
+                continue
+        return None
 
-        nuevo = RouteSchedule.objects.create(
-            route=route,
-            day_of_week=day_of_week,
-            start_time=start_time,
-            end_time=end_time
-        )
+    payload["start_time"] = _parse_time(payload.get("start_time"))
+    payload["end_time"] = _parse_time(payload.get("end_time"))
 
-        return Response({
-            "message": "Horario agregado correctamente",
-            "id": nuevo.id
-        }, status=201)
+    serializer = RouteScheduleSerializer(data=payload)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=400)
+
+    nuevo = serializer.save()
+    return Response(RouteScheduleSerializer(nuevo).data, status=201)
 
 
 @api_view(["DELETE"])
@@ -436,16 +474,182 @@ def admin_route_schedule_delete_view(request, pk):
 
     return Response({"message": "Horario eliminado correctamente"}, status=200)
 
+
 # ====================================
-#   CIUDADANO – RUTAS
+#   ✅ ADMIN – COMUNIDADES (NUEVO)
 # ====================================
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAdminUser])
+def communities_view(request):
+    """
+    Catálogo de comunidades:
+    - GET: lista
+    - POST: crea comunidad {name}
+    """
+    if request.method == "GET":
+        communities = Community.objects.all().order_by("name")
+        serializer = CommunitySerializer(communities, many=True)
+        return Response(serializer.data, status=200)
+
+    # POST
+    name = request.data.get("name")
+    if not name or not str(name).strip():
+        return Response({"error": "El nombre de la comunidad es obligatorio."}, status=400)
+
+    name = str(name).strip()
+
+    # Evitar duplicados por unique=True
+    if Community.objects.filter(name__iexact=name).exists():
+        return Response({"error": "Esa comunidad ya existe."}, status=400)
+
+    c = Community.objects.create(name=name)
+    return Response(CommunitySerializer(c).data, status=201)
+
+
+@api_view(["PUT", "PATCH", "DELETE"])
+@permission_classes([IsAdminUser])
+def community_detail_view(request, pk):
+    """
+    - PUT/PATCH: editar nombre
+    - DELETE: eliminar comunidad (si está asignada, borra relaciones por cascade)
+    """
+    community = get_object_or_404(Community, pk=pk)
+
+    if request.method in ["PUT", "PATCH"]:
+        name = request.data.get("name")
+        if not name or not str(name).strip():
+            return Response({"error": "El nombre de la comunidad es obligatorio."}, status=400)
+
+        name = str(name).strip()
+
+        # Evitar duplicar contra otras comunidades
+        if Community.objects.filter(name__iexact=name).exclude(pk=community.pk).exists():
+            return Response({"error": "Ya existe otra comunidad con ese nombre."}, status=400)
+
+        community.name = name
+        community.save()
+        return Response(CommunitySerializer(community).data, status=200)
+
+    # DELETE
+    community.delete()
+    return Response({"message": "Comunidad eliminada correctamente."}, status=200)
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAdminUser])
+def route_communities_view(request):
+    """
+    Asignación de comunidades a rutas:
+    - GET /api/route-communities/?route_id=1  -> lista asignadas a esa ruta
+    - POST {route_id, community_id} -> asigna
+    """
+    if request.method == "GET":
+        route_id = request.query_params.get("route_id")
+        if not route_id:
+            return Response({"error": "route_id es obligatorio en query params."}, status=400)
+
+        qs = RouteCommunity.objects.select_related("route", "community").filter(route_id=route_id).order_by("community__name")
+        serializer = RouteCommunitySerializer(qs, many=True)
+        return Response(serializer.data, status=200)
+
+    # POST
+    route_id = request.data.get("route_id")
+    community_id = request.data.get("community_id")
+
+    if not route_id or not community_id:
+        return Response({"error": "route_id y community_id son obligatorios."}, status=400)
+
+    try:
+        route = Route.objects.get(pk=route_id)
+    except Route.DoesNotExist:
+        return Response({"error": "Ruta no encontrada."}, status=404)
+
+    try:
+        community = Community.objects.get(pk=community_id)
+    except Community.DoesNotExist:
+        return Response({"error": "Comunidad no encontrada."}, status=404)
+
+    if RouteCommunity.objects.filter(route=route, community=community).exists():
+        return Response({"error": "Esa comunidad ya está asignada a esta ruta."}, status=400)
+
+    rc = RouteCommunity.objects.create(route=route, community=community)
+    return Response(RouteCommunitySerializer(rc).data, status=201)
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAdminUser])
+def route_community_delete_view(request, pk):
+    """
+    Quitar una comunidad de una ruta (borra solo la relación RouteCommunity)
+    """
+    rc = get_object_or_404(RouteCommunity, pk=pk)
+    rc.delete()
+    return Response({"message": "Comunidad quitada de la ruta correctamente."}, status=200)
+
+
+# ====================================
+#   CIUDADANO – CALENDARIO (RouteDate)
+# ====================================
+
+def _prefetch_route_communities(qs):
+    """
+    Prefetch compatible para distintas configuraciones de related_name.
+    Si tu RouteCommunity tiene related_name='route_communities' o 'community_routes',
+    esto ayuda a que el serializer pueda resolver communities sin N+1.
+    """
+    try:
+        return qs.prefetch_related("route__route_communities__community")
+    except Exception:
+        # fallback si el related_name fuera diferente (por ejemplo community_routes)
+        return qs.prefetch_related("route__community_routes__community")
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def my_routes_view(request):
-    routes = Route.objects.prefetch_related("points").all()
+    fechas = RouteDate.objects.select_related("route").order_by("date")
+    fechas = _prefetch_route_communities(fechas)  # ✅ importante
+    serializer = RouteDateSerializer(fechas, many=True)
+    return Response(serializer.data, status=200)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def citizen_calendar_view(request):
+    fechas = RouteDate.objects.select_related("route").order_by("date")
+    fechas = _prefetch_route_communities(fechas)  # ✅ importante
+    serializer = RouteDateSerializer(fechas, many=True)
+    return Response(serializer.data, status=200)
+
+
+# ✅✅✅ FIX: HORARIOS PARA CIUDADANO (SIN 500)
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def citizen_route_schedules_view(request):
+    try:
+        horarios = (
+            RouteSchedule.objects
+            .select_related("route")
+            .filter(route__isnull=False)
+            .order_by("route_id", "start_time")
+        )
+
+        serializer = RouteScheduleSerializer(horarios, many=True)
+        return Response(serializer.data, status=200)
+
+    except Exception as e:
+        print("ERROR citizen_route_schedules_view:", repr(e))
+        return Response({"error": "Error interno cargando horarios."}, status=500)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def citizen_routes_with_points_view(request):
+    routes = Route.objects.prefetch_related("points").order_by("id")
     serializer = RouteSerializer(routes, many=True)
-    return Response(serializer.data)
+    return Response(serializer.data, status=200)
+
 
 # ====================================
 #   CIUDADANO – REPORTES
@@ -478,6 +682,7 @@ def my_reports_view(request):
         serializer = ReportSerializer(report)
         return Response(serializer.data, status=201)
 
+
 # ====================================
 #   OTROS
 # ====================================
@@ -503,6 +708,7 @@ def home_view(request):
 
 def dashboard_view(request):
     return HttpResponse(status=200)
+
 
 # ====================================
 #   SUBIR FOTO
@@ -531,6 +737,7 @@ def upload_profile_picture(request):
         "photo_url": full_url,
     })
 
+
 # ====================================
 #   NOTIFICACIONES CIUDADANO
 # ====================================
@@ -554,6 +761,7 @@ def my_notifications_view(request):
 
     return Response(data, status=200)
 
+
 # ====================================
 #   🚀 FUNCIÓN EXTRA 1 — LISTA DE REPORTES
 # ====================================
@@ -569,12 +777,25 @@ def generate_reports_view(request):
         "reports": serializer.data
     }, status=200)
 
+
 # ====================================
 #   🚀 FUNCIÓN EXTRA 2 — PDF DE REPORTES
 # ====================================
 
+# ✅✅✅ FIX PDF: Renderer para evitar 406 por Accept header
+class PDFRenderer(BaseRenderer):
+    media_type = "application/pdf"
+    format = "pdf"
+    charset = None
+    render_style = "binary"
+
+    def render(self, data, media_type=None, renderer_context=None):
+        return data
+
+
 @api_view(["GET"])
 @permission_classes([IsAdminUser])
+@renderer_classes([PDFRenderer])
 def generate_reports_pdf_view(request):
     reports = Report.objects.select_related("user").order_by("-fecha")
 
@@ -599,27 +820,73 @@ def generate_reports_pdf_view(request):
     p.save()
     buffer.seek(0)
 
-    return HttpResponse(buffer, content_type="application/pdf")
+    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="reporte_smart_collector.pdf"'
+    return response
+
 
 # ====================================
 #   🚀 FUNCIÓN EXTRA 3 — ENVIAR MENSAJE
 # ====================================
 
-@api_view(["POST"])
+@api_view(["GET", "POST"])
 @permission_classes([IsAdminUser])
 def send_message_view(request):
+    if request.method == "GET":
+        try:
+            limit = int(request.query_params.get("limit", 50))
+        except ValueError:
+            limit = 50
+
+        mensajes = (
+            Notification.objects
+            .select_related("usuario")
+            .order_by("-created_at")[:limit]
+        )
+
+        data = [
+            {
+                "id": m.id,
+                "user_id": m.usuario.id if m.usuario else None,
+                "username": m.usuario.username if m.usuario else None,
+                "message": m.message,
+                "estado": m.estado,
+                "created_at": m.created_at,
+            }
+            for m in mensajes
+        ]
+        return Response(data, status=200)
+
     user_id = request.data.get("user_id")
     message = request.data.get("message")
 
-    if not user_id or not message:
+    if not message:
+        return Response({"error": "message es obligatorio."}, status=400)
+
+    message = str(message).strip()
+    if not message:
+        return Response({"error": "message no puede ir vacío."}, status=400)
+
+    if user_id in [None, "", "all", "ALL", "todos", "TODOS"]:
+        users = User.objects.filter(is_active=True)
+
+        sent = 0
+        for u in users:
+            Notification.objects.create(
+                usuario=u,
+                message=message,
+                estado="pendiente"
+            )
+            sent += 1
+
         return Response(
-            {"error": "user_id y message son obligatorios."},
-            status=400
+            {"message": "Mensaje enviado a todos correctamente.", "sent_to": sent},
+            status=201
         )
 
     try:
-        user = User.objects.get(id=user_id)
-    except User.DoesNotExist:
+        user = User.objects.get(id=int(user_id))
+    except (User.DoesNotExist, ValueError, TypeError):
         return Response({"error": "Usuario no encontrado."}, status=404)
 
     Notification.objects.create(
@@ -629,6 +896,3 @@ def send_message_view(request):
     )
 
     return Response({"message": "Mensaje enviado correctamente."}, status=201)
-
-
-

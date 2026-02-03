@@ -8,7 +8,13 @@ const ForgotPassword = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const API_URL = process.env.REACT_APP_API_URL; // 👈 Render URL
+  // ================================
+  // NORMALIZAR API_URL (igual que en tus otros componentes)
+  // ================================
+  let API_URL = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000";
+  API_URL = API_URL.replace(/\/+$/, ""); // quita "/" finales
+  if (!API_URL.endsWith("/api")) API_URL = `${API_URL}/api`;
+  // ================================
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,19 +23,16 @@ const ForgotPassword = () => {
 
     try {
       const res = await axios.post(`${API_URL}/forgot-password/`, {
-        email: email,
+        email: String(email || "").trim(),
       });
 
       setMessage(
-        res.data.message ||
+        res.data?.message ||
           "Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña."
       );
     } catch (err) {
       console.error("Error recuperando contraseña:", err);
-
-      setError(
-        "Error al enviar el correo. Por favor, inténtelo nuevamente."
-      );
+      setError("Error al enviar el correo. Por favor, inténtelo nuevamente.");
     }
   };
 

@@ -1,42 +1,61 @@
 // ReportsView.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import './ReportsView.css';
 
 const ReportsView = () => {
-  const [detalle, setDetalle] = useState("");
+  const navigate = useNavigate();
+
+  const [detalle, setDetalle] = useState('');
   const [reportes, setReportes] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Normalizar API URL
-  let API_URL = process.env.REACT_APP_API_URL;
-  API_URL = API_URL.replace(/\/+$/, "");
-  if (!API_URL.endsWith("/api")) {
-    API_URL = `${API_URL}/api`;
-  }
+  // ===============================
+  // API URL NORMALIZADA
+  // ===============================
+  let API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+  API_URL = API_URL.replace(/\/+$/, '');
+  API_URL = `${API_URL}/api`;
 
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem('token');
 
-  // Obtener mis reportes
+  // ===============================
+  // VERIFICAR SESIÓN
+  // ===============================
   useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        const res = await axios.get(`${API_URL}/my-reports/`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setReportes(res.data);
-      } catch (err) {
-        console.error("Error al cargar reportes:", err);
-      }
-    };
-    fetchReports();
-  }, [API_URL, token]);
+    if (!token) {
+      navigate('/login', { replace: true });
+    }
+  }, [token, navigate]);
 
+  // ===============================
+  // CARGAR MIS REPORTES
+  // ===============================
+  const fetchReports = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/my-reports/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setReportes(res.data);
+    } catch (err) {
+      console.error('Error al cargar reportes:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchReports();
+    // eslint-disable-next-line
+  }, []);
+
+  // ===============================
+  // ENVIAR REPORTE
+  // ===============================
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!detalle.trim()) {
-      alert("Debes escribir una descripción.");
+      alert('Debes escribir una descripción.');
       return;
     }
 
@@ -46,28 +65,57 @@ const ReportsView = () => {
       await axios.post(
         `${API_URL}/my-reports/`,
         {
-          detalle: detalle,      // 👈 CAMPO QUE ESPERA EL BACKEND
-          tipo: "incidencias"    // 👈 se envía automáticamente
+          detalle: detalle,
+          tipo: 'incidencia'
         },
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
 
-      alert("Reporte enviado correctamente.");
-      setDetalle("");
-
-      // recargar lista
-      const res = await axios.get(`${API_URL}/my-reports/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setReportes(res.data);
+      setDetalle('');
+      fetchReports();
+      alert('✅ Reporte enviado correctamente.');
 
     } catch (err) {
-      console.error("Error al enviar el reporte:", err);
-      alert("Error al enviar el reporte. Inténtalo de nuevo.");
+      console.error('Error al enviar el reporte:', err);
+      alert('❌ Error al enviar el reporte.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ===============================
+  // ELIMINAR REPORTE
+  // ===============================
+  const handleDelete = async (id) => {
+    if (!window.confirm('¿Seguro que deseas eliminar este reporte?')) return;
+
+    try {
+      await axios.delete(`${API_URL}/my-reports/${id}/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      setReportes(reportes.filter(rep => rep.id !== id));
+    } catch (err) {
+      console.error('Error al eliminar reporte:', err);
+      alert('❌ Error al eliminar el reporte.');
+    }
+  };
+
+  // ===============================
+  // TRADUCIR ESTADO
+  // ===============================
+  const renderStatus = (status) => {
+    switch (status) {
+      case 'pending':
+        return 'Pendiente';
+      case 'resolved':
+        return 'Resuelto';
+      case 'unresolved':
+        return 'No resuelto';
+      default:
+        return status;
     }
   };
 
@@ -82,14 +130,15 @@ const ReportsView = () => {
           onChange={(e) => setDetalle(e.target.value)}
           placeholder="Describe la incidencia..."
           required
-        ></textarea>
+        />
 
         <button type="submit" disabled={loading}>
-          {loading ? "Enviando..." : "Enviar Reporte"}
+          {loading ? 'Enviando...' : 'Enviar Reporte'}
         </button>
       </form>
 
       <h2>Mis Reportes Enviados</h2>
+
       {reportes.length === 0 ? (
         <p>Aún no has enviado ningún reporte.</p>
       ) : (
@@ -97,8 +146,15 @@ const ReportsView = () => {
           {reportes.map((rep) => (
             <li key={rep.id} className="report-item">
               <p><strong>Detalle:</strong> {rep.detalle}</p>
-              <p><strong>Fecha:</strong> {rep.fecha}</p>
-              <p><strong>Estado:</strong> {rep.status}</p>
+              <p><strong>Fecha:</strong> {new Date(rep.fecha).toLocaleString()}</p>
+              <p><strong>Estado:</strong> {renderStatus(rep.status)}</p>
+
+              <button
+                className="btn-delete"
+                onClick={() => handleDelete(rep.id)}
+              >
+                Eliminar
+              </button>
             </li>
           ))}
         </ul>

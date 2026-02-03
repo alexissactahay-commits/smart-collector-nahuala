@@ -7,14 +7,14 @@ const ContactView = () => {
       <h2>Contacto - Smart Collector</h2>
       <div className="contact-card">
         <p>¿Tienes alguna duda, sugerencia o necesitas reportar un problema urgente?</p>
-        <p>¡No dudes en contactarnos! Estamos aquí para servirte y mejorar nuestro servicio para Olintepeque.</p>
+        <p>¡No dudes en contactarnos! Estamos aquí para servirte y mejorar nuestro servicio- TU MUNI NAHUALA.</p>
         
         <div className="contact-info">
           <div className="contact-item">
             <span className="icon">📞</span>
             <div>
-              <h3>Coordinador del departamento de limpieza</h3>
-              <a href="">Eliseo Ramon</a>
+              <h3>ALCALDE MUNICIPAL</h3>
+              <a href="">MANUEL GUARCHAJ</a>
               <h3>Teléfono</h3>
               <a href="tel:39792361">39792361</a>
             </div>

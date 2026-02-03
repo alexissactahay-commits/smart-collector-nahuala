@@ -1,7 +1,7 @@
 // Users.js
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 import './Users.css';
 
 const Users = () => {
@@ -12,19 +12,16 @@ const Users = () => {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}admin/users/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get('/api/admin/users/');
       setUsers(res.data);
-      setLoading(false);
     } catch (err) {
       console.error('Error al cargar usuarios:', err);
+
       if (err.response?.status === 401 || err.response?.status === 403) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('userRole');
+        localStorage.clear();
         navigate('/login', { replace: true });
       }
+    } finally {
       setLoading(false);
     }
   }, [navigate]);
@@ -33,28 +30,29 @@ const Users = () => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('userRole');
+
     if (!token || role !== 'admin') {
       navigate('/login', { replace: true });
       return;
     }
+
     fetchUsers();
   }, [navigate, fetchUsers]);
 
-  // Función para cambiar el rol de un usuario
+  // Cambiar rol de usuario
   const updateRole = async (userId, newRole) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.put(`${process.env.REACT_APP_API_URL}admin/users/`, {
+      await api.put('/api/admin/users/', {
         id: userId,
-        role: newRole
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
+        role: newRole,
       });
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
+
+      setUsers(prev =>
+        prev.map(user =>
           user.id === userId ? { ...user, role: newRole } : user
         )
       );
+
       setMessage(`Rol actualizado a ${newRole}`);
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
@@ -63,21 +61,22 @@ const Users = () => {
     }
   };
 
-  // Función para activar o desactivar un usuario
+  // Activar / desactivar usuario
   const toggleActive = async (userId, isActive) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.put(`${process.env.REACT_APP_API_URL}admin/users/`, {
+      await api.put('/api/admin/users/', {
         id: userId,
-        is_active: !isActive
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
+        is_active: !isActive,
       });
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.id === userId ? { ...user, is_active: !isActive } : user
+
+      setUsers(prev =>
+        prev.map(user =>
+          user.id === userId
+            ? { ...user, is_active: !isActive }
+            : user
         )
       );
+
       setMessage(isActive ? 'Usuario desactivado' : 'Usuario activado');
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
@@ -93,7 +92,9 @@ const Users = () => {
   return (
     <div className="users-container">
       <h1>Lista de Usuarios - Smart Collector</h1>
+
       {message && <div className="alert-message">{message}</div>}
+
       <table className="users-table">
         <thead>
           <tr>
@@ -101,35 +102,44 @@ const Users = () => {
             <th>Correo</th>
             <th>Rol</th>
             <th>Estado</th>
-            <th>Acción</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
-          {users.map(user => (
-            <tr key={user.id}>
-              <td>{user.username}</td>
-              <td>{user.email}</td>
-              <td>{user.role}</td>
-              <td>{user.is_active ? 'Activo' : 'Inactivo'}</td>
-              <td>
-                {user.role === 'ciudadano' ? (
-                  <button onClick={() => updateRole(user.id, 'admin')}>
-                    Hacer Admin
-                  </button>
-                ) : (
-                  <button onClick={() => updateRole(user.id, 'ciudadano')}>
-                    Quitar Admin
-                  </button>
-                )}
-                <button
-                  onClick={() => toggleActive(user.id, user.is_active)}
-                  className={user.is_active ? 'btn-deactivate' : 'btn-activate'}
-                >
-                  {user.is_active ? 'Desactivar' : 'Activar'}
-                </button>
+          {users.length === 0 ? (
+            <tr>
+              <td colSpan="5" style={{ textAlign: 'center' }}>
+                No hay usuarios registrados
               </td>
             </tr>
-          ))}
+          ) : (
+            users.map(user => (
+              <tr key={user.id}>
+                <td>{user.username}</td>
+                <td>{user.email}</td>
+                <td>{user.role}</td>
+                <td>{user.is_active ? 'Activo' : 'Inactivo'}</td>
+                <td>
+                  {user.role === 'ciudadano' ? (
+                    <button onClick={() => updateRole(user.id, 'admin')}>
+                      Hacer Admin
+                    </button>
+                  ) : (
+                    <button onClick={() => updateRole(user.id, 'ciudadano')}>
+                      Quitar Admin
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => toggleActive(user.id, user.is_active)}
+                    className={user.is_active ? 'btn-deactivate' : 'btn-activate'}
+                  >
+                    {user.is_active ? 'Desactivar' : 'Activar'}
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>

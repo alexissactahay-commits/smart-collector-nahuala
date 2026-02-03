@@ -4,41 +4,37 @@ from datetime import timedelta
 from decouple import config
 import dj_database_url
 
+# ======================================================
+# BASE
+# ======================================================
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# =======================================
-# 🔐 SECRET KEY
-# =======================================
-SECRET_KEY = config("SECRET_KEY")
+# ======================================================
+# SECRET KEY
+# ======================================================
+SECRET_KEY = config("SECRET_KEY", default="django-insecure-local-key")
 
-# =======================================
-# 🚀 DEBUG
-# =======================================
-DEBUG = config("DEBUG", default=False, cast=bool)
+# ======================================================
+# DEBUG (EN LOCAL DEBE SER TRUE)
+# ======================================================
+DEBUG = True
 
-# =======================================
-# 🌐 ALLOWED HOSTS
-# =======================================
+# ======================================================
+# ALLOWED HOSTS
+# ======================================================
 ALLOWED_HOSTS = [
-    "smartcollectorolintepeque.com",
-    "www.smartcollectorolintepeque.com",
-    ".onrender.com",
+    "127.0.0.1",
+    "localhost",
 ]
 
-# =======================================
-# 📦 INSTALLED APPS
-# =======================================
+# ======================================================
+# INSTALLED APPS
+# ======================================================
 INSTALLED_APPS = [
     "corsheaders",
     "django.contrib.sites",
 
-    # Allauth
-    "allauth",
-    "allauth.account",
-    "allauth.socialaccount",
-    "allauth.socialaccount.providers.google",
-
-    # Django Apps
+    # Django
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -50,44 +46,50 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
 
-    # Custom App
+    # Allauth
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+
+    # Local app
     "core",
 ]
 
-# =======================================
-# 🔧 MIDDLEWARE
-# =======================================
+SITE_ID = 1
+
+# ======================================================
+# MIDDLEWARE
+# ======================================================
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
 
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-
-    # requerido por allauth
-    "allauth.account.middleware.AccountMiddleware",
 
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "smart_collector.urls"
 
-# =======================================
-# 🎨 TEMPLATES (OBLIGATORIO para Admin + Allauth)
-# =======================================
+# ======================================================
+# TEMPLATES
+# ======================================================
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],  # carpeta opcional
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
-                "django.template.context_processors.request",  # requerido por allauth
+                "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],
@@ -95,61 +97,52 @@ TEMPLATES = [
     },
 ]
 
-# =======================================
-# 🗃 DATABASE
-# =======================================
+# ======================================================
+# DATABASE (LOCAL POSTGRES)
+# ======================================================
 DATABASES = {
     "default": dj_database_url.parse(
-        config("DATABASE_URL"),
+        config(
+            "DATABASE_URL",
+            default="postgres://postgres:postgres@localhost:5432/smart_collector_nahuala"
+        ),
         conn_max_age=600,
-        ssl_require=True
+        ssl_require=False,
     )
 }
 
-# =======================================
-# 🌎 CORS + CSRF
-# =======================================
-CORS_ALLOWED_ORIGINS = [
-    "https://smartcollectorolintepeque.com",
-    "https://www.smartcollectorolintepeque.com",
-]
-
-CSRF_TRUSTED_ORIGINS = [
-    "https://smartcollectorolintepeque.com",
-    "https://www.smartcollectorolintepeque.com",
-    "https://*.onrender.com",
-]
-
+# ======================================================
+# CORS / CSRF (CLAVE PARA REACT)
+# ======================================================
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-# =======================================
-# 📁 STATIC FILES
-# =======================================
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+# ======================================================
+# STATIC FILES
+# ======================================================
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# =======================================
-# 📸 MEDIA FILES (FOTOS DE PERFIL)
-# =======================================
+# ======================================================
+# MEDIA FILES
+# ======================================================
 MEDIA_URL = "/media/"
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+MEDIA_ROOT = BASE_DIR / "media"
 
-# Para servir media en desarrollo
-if DEBUG:
-    from django.conf.urls.static import static
-    MEDIA_URL = '/media/'
-    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-# =======================================
-# 🔑 JWT
-# =======================================
+# ======================================================
+# AUTH / JWT
+# ======================================================
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.AllowAny",
     ),
 }
 
@@ -160,19 +153,24 @@ SIMPLE_JWT = {
     "SIGNING_KEY": SECRET_KEY,
 }
 
-# =======================================
-# 🔐 CUSTOM USER MODEL
-# =======================================
+# ======================================================
+# CUSTOM USER
+# ======================================================
 AUTH_USER_MODEL = "core.User"
 
-# =======================================
-# 🔐 GOOGLE LOGIN
-# =======================================
-GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID")
+# ======================================================
+# GOOGLE LOGIN (DESACTIVADO EN LOCAL)
+# ======================================================
+GOOGLE_CLIENT_ID = ""
 
-# =======================================
-# AUTO FIELD
-# =======================================
+# ======================================================
+# DEFAULT FIELD
+# ======================================================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Force Render to rebuild migrations
+# ======================================================
+# EMAIL (LOCAL - DESARROLLO)
+# ✅ NO intenta conectarse a SMTP, imprime el correo en consola
+# ======================================================
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = "no-reply@smartcollector.local"

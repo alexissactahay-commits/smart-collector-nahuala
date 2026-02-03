@@ -10,6 +10,14 @@ const AdminDashboard = () => {
     navigate(path);
   };
 
+  // ✅ Logout seguro (sin depender de /logout)
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('username');
+    navigate('/login');
+  };
+
   return (
     <div className="admin-dashboard">
       {/* Encabezado con logo y nombre */}
@@ -26,33 +34,46 @@ const AdminDashboard = () => {
           <div className="icon">👥</div>
           <h3>USUARIOS</h3>
         </div>
+
         <div className="card" onClick={() => navigate('/user-reports')}>
           <div className="icon">📊</div>
           <h3>REPORTES USUARIOS</h3>
         </div>
+
         <div className="card" onClick={() => navigate('/generate-reports')}>
           <div className="icon">📄</div>
           <h3>GENERAR INFORMES</h3>
         </div>
+
         <div className="card" onClick={() => navigate('/collection-points')}>
           <div className="icon">📍</div>
           <h3>PUNTOS DE RECOLECCIÓN</h3>
         </div>
+
         <div className="card" onClick={() => navigate('/send-message')}>
           <div className="icon">✉️</div>
           <h3>ENVIAR MENSAJES</h3>
         </div>
+
         {/* 👇 Reemplazado: INCENTIVOS → AGREGAR FECHA */}
         <div className="card" onClick={() => navigate('/add-date')}>
           <div className="icon">📅</div>
           <h3>AGREGAR FECHA</h3>
         </div>
+
         {/* 👇 Reemplazado: PUBLICACIONES → AGREGAR HORARIO */}
         <div className="card" onClick={() => navigate('/add-schedule')}>
           <div className="icon">⏰</div>
           <h3>AGREGAR HORARIO</h3>
         </div>
-        <div className="card" onClick={() => handleCardClick('/logout')}>
+
+        {/* ✅✅✅ NUEVO: LISTA DE COMUNIDADES */}
+        <div className="card" onClick={() => navigate('/admin/route-communities')}>
+          <div className="icon">🏘️</div>
+          <h3>LISTA DE COMUNIDADES</h3>
+        </div>
+
+        <div className="card" onClick={handleLogout}>
           <div className="icon">🚪</div>
           <h3>SALIR</h3>
         </div>

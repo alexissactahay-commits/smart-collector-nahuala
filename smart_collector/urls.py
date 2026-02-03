@@ -3,30 +3,42 @@ from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 
-# Importar vistas existentes
 from core.views import (
     # AUTH
     login_view,
     register_view,
     change_password,
     forgot_password_view,
+    google_login,
 
     # Ciudadano
     my_routes_view,
     my_reports_view,
     my_notifications_view,
+    citizen_routes_with_points_view,
+    citizen_calendar_view,
 
-    # Admin
+    # ✅ Horarios ciudadano
+    citizen_route_schedules_view,
+
+    # Admin (API)
     admin_users_view,
     admin_reports_view,
     admin_report_detail_view,
-    generate_reports_view,         # ✔ ESTA SÍ EXISTE
+    generate_reports_view,
     generate_reports_pdf_view,
     admin_routes_view,
-    admin_route_dates_view,        # ✔ AddDate.js
-    admin_route_schedules_view,    # ✔ AddSchedule.js (GET y POST)
-    admin_route_schedule_delete_view,  # ✔ AddSchedule.js (DELETE)
+    admin_route_detail_view,
+    admin_route_dates_view,
+    admin_route_schedules_view,
+    admin_route_schedule_delete_view,
     send_message_view,
+
+    # ✅✅✅ NUEVO: Comunidades y asignación a rutas
+    communities_view,
+    community_detail_view,
+    route_communities_view,
+    route_community_delete_view,
 
     # Vehículos
     vehicle_detail,
@@ -42,7 +54,9 @@ from core.views import (
 )
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    # ✅ Admin real de Django (separado)
+    path('dj-admin/', admin.site.urls),
+
     path('', home_view, name='home'),
 
     # ======================
@@ -52,6 +66,7 @@ urlpatterns = [
     path('api/register/', register_view),
     path('api/change-password/', change_password),
     path('api/forgot-password/', forgot_password_view),
+    path('api/google-login/', google_login),
 
     # ======================
     #   DASHBOARDS
@@ -63,34 +78,54 @@ urlpatterns = [
     #   CIUDADANO
     # ======================
     path('api/my-routes/', my_routes_view),
+    path('api/calendar/', citizen_calendar_view),
     path('api/my-reports/', my_reports_view),
     path('api/my-notifications/', my_notifications_view),
 
+    # ✅ RUTAS CON PUNTOS (para mapa ciudadano)
+    path('api/routes/', citizen_routes_with_points_view),
+
+    # ✅ HORARIOS DEFINIDOS POR ADMIN (para HoursView y selector)
+    path('api/citizen/route-schedules/', citizen_route_schedules_view),
+
     # ======================
-    #     ADMIN
+    #     ADMIN (API)
     # ======================
     path('api/admin/users/', admin_users_view),
     path('api/admin/reports/', admin_reports_view),
     path('api/admin/reports/<int:pk>/', admin_report_detail_view),
 
-    # 🔥 GENERAR INFORME JSON
+    # 🔥 Generar informe JSON
     path('api/admin/reports/generate/', generate_reports_view),
 
-    # 🔥 GENERAR PDF
+    # 🔥 Generar PDF
     path('api/admin/reports/generate-pdf/', generate_reports_pdf_view),
 
-    # 🔥 RUTAS
+    # 🔥 Rutas
     path('api/admin/routes/', admin_routes_view),
+    path('api/admin/routes/<int:pk>/', admin_route_detail_view),
 
-    # 🔥 FECHAS DE RUTA (AddDate.js)
+    # 🔥 Fechas de ruta
     path('api/admin/route-dates/', admin_route_dates_view),
 
-    # 🔥 HORARIOS DE RUTA (AddSchedule.js)
-    path('api/admin/route-schedules/', admin_route_schedules_view),            # GET + POST
-    path('api/admin/route-schedules/<int:pk>/', admin_route_schedule_delete_view),  # DELETE
+    # 🔥 Horarios de ruta (admin)
+    path('api/admin/route-schedules/', admin_route_schedules_view),
+    path('api/admin/route-schedules/<int:pk>/', admin_route_schedule_delete_view),
 
-    # 🔥 MENSAJES
+    # 🔥 Mensajes
     path('api/admin/messages/', send_message_view),
+
+    # ======================
+    # ✅✅✅ NUEVO: COMUNIDADES (ADMIN)
+    # ======================
+    # Catálogo de comunidades
+    path('api/admin/communities/', communities_view),
+    path('api/admin/communities/<int:pk>/', community_detail_view),
+
+    # Asignación de comunidades a rutas
+    # GET: /api/admin/route-communities/?route_id=1
+    path('api/admin/route-communities/', route_communities_view),
+    path('api/admin/route-communities/<int:pk>/', route_community_delete_view),
 
     # ======================
     #     VEHÍCULO
@@ -102,7 +137,7 @@ urlpatterns = [
     path('api/admin/create-default-vehicle/', create_default_vehicle),
 
     # ======================
-    #   SUBIR FOTO DE PERFIL
+    #   SUBIR FOTO PERFIL
     # ======================
     path('api/upload-profile-picture/', upload_profile_picture),
 ]

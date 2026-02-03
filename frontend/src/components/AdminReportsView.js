@@ -1,69 +1,71 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+// AdminReportsView.js
+import React, { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../services/api";
 import "./AdminReportsView.css";
 
 const AdminReportsView = () => {
-  const API_URL = process.env.REACT_APP_API_URL;
-
+  const navigate = useNavigate();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // ===========================
-  // Cargar reportes de ciudadanos
+  // Cargar reportes (solo admin)
   // ===========================
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
+    const role = localStorage.getItem("userRole");
+
+    if (role !== "admin") {
+      navigate("/login", { replace: true });
+      return;
+    }
+
     try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        alert("No estás autenticado. Por favor, inicia sesión.");
-        window.location.href = "/login";
-        return;
-      }
-
-      const res = await axios.get(`${API_URL}/admin/reports/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+      const res = await api.get("/admin/reports/");
       setReports(res.data);
     } catch (error) {
       console.error("Error al cargar reportes:", error);
-      alert("Error al cargar reportes.");
+
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        localStorage.clear();
+        navigate("/login", { replace: true });
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
 
   useEffect(() => {
     fetchReports();
-  }, []);
+  }, [fetchReports]);
 
   // ===========================
   // Actualizar estado del reporte
   // ===========================
   const updateStatus = async (id, newStatus) => {
     try {
-      const token = localStorage.getItem("token");
+      await api.put(`/admin/reports/${id}/`, {
+        status: newStatus,
+      });
 
-      await axios.put(
-        `${API_URL}/admin/reports/${id}/`,
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
+      setReports((prev) =>
+        prev.map((r) =>
+          r.id === id ? { ...r, status: newStatus } : r
+        )
       );
-
-      alert(`Estado actualizado a: ${newStatus}`);
-      fetchReports();
     } catch (error) {
-      console.error("Error al actualizar reporte:", error);
-      alert("No se pudo actualizar el estado.");
+      console.error("Error al actualizar estado:", error);
+      alert("No se pudo actualizar el estado del reporte.");
     }
   };
 
-  if (loading) return <div className="loading">Cargando reportes...</div>;
+  if (loading) {
+    return <div className="loading">Cargando reportes...</div>;
+  }
 
   return (
     <div className="reports-admin-container">
-      <h2>Reportes de Ciudadanos - Smart Collector</h2>
+      <h2>Reportes de Ciudadanos</h2>
 
       <div className="reports-list">
         {reports.length === 0 ? (
@@ -77,12 +79,14 @@ const AdminReportsView = () => {
               <div className="report-header">
                 <h3>Reporte #{report.id}</h3>
                 <span className="report-date">
-                  {new Date(report.created_at).toLocaleString()}
+                  {report.fecha
+                    ? new Date(report.fecha).toLocaleString()
+                    : "Fecha no disponible"}
                 </span>
               </div>
 
               <p>
-                <strong>Descripción:</strong> {report.description}
+                <strong>Descripción:</strong> {report.detalle}
               </p>
 
               <p>
@@ -101,27 +105,27 @@ const AdminReportsView = () => {
                 </span>
               </p>
 
-              {/* Botones para cambiar estado */}
+              {/* Acciones */}
               <div className="actions-row">
                 <button
                   onClick={() => updateStatus(report.id, "resolved")}
                   className="btn-success"
                 >
-                  Marcar como Resuelto
+                  Resuelto
                 </button>
 
                 <button
                   onClick={() => updateStatus(report.id, "unresolved")}
                   className="btn-danger"
                 >
-                  Marcar como No Resuelto
+                  No Resuelto
                 </button>
 
                 <button
                   onClick={() => updateStatus(report.id, "pending")}
                   className="btn-warning"
                 >
-                  Marcar como Pendiente
+                  Pendiente
                 </button>
               </div>
             </div>
