@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
 
 from core.views import (
     # AUTH
@@ -53,97 +54,106 @@ from core.views import (
     upload_profile_picture,
 )
 
-urlpatterns = [
-    # ✅ Admin real de Django (separado)
-    path('dj-admin/', admin.site.urls),
+# ✅ Health check rápido (para verificar que está RUNNING)
+def health_view(request):
+    return JsonResponse({"status": "ok"}, status=200)
 
-    path('', home_view, name='home'),
+urlpatterns = [
+    # ✅ Admin real de Django (dejar ambos para evitar confusión)
+    path("dj-admin/", admin.site.urls),
+    path("admin/", admin.site.urls),  # ✅ ahora /admin/ también funcionará
+
+    # ✅ Health check
+    path("health/", health_view, name="health"),
+
+    # Home
+    path("", home_view, name="home"),
 
     # ======================
     #       AUTH
     # ======================
-    path('api/login/', login_view),
-    path('api/register/', register_view),
-    path('api/change-password/', change_password),
-    path('api/forgot-password/', forgot_password_view),
-    path('api/google-login/', google_login),
+    path("api/login/", login_view),
+    path("api/register/", register_view),
+    path("api/change-password/", change_password),
+    path("api/forgot-password/", forgot_password_view),
+    path("api/google-login/", google_login),
 
     # ======================
     #   DASHBOARDS
     # ======================
-    path('admin-dashboard/', dashboard_view),
-    path('user-dashboard/', dashboard_view),
+    path("admin-dashboard/", dashboard_view),
+    path("user-dashboard/", dashboard_view),
 
     # ======================
     #   CIUDADANO
     # ======================
-    path('api/my-routes/', my_routes_view),
-    path('api/calendar/', citizen_calendar_view),
-    path('api/my-reports/', my_reports_view),
-    path('api/my-notifications/', my_notifications_view),
+    path("api/my-routes/", my_routes_view),
+    path("api/calendar/", citizen_calendar_view),
+    path("api/my-reports/", my_reports_view),
+    path("api/my-notifications/", my_notifications_view),
 
     # ✅ RUTAS CON PUNTOS (para mapa ciudadano)
-    path('api/routes/', citizen_routes_with_points_view),
+    path("api/routes/", citizen_routes_with_points_view),
 
     # ✅ HORARIOS DEFINIDOS POR ADMIN (para HoursView y selector)
-    path('api/citizen/route-schedules/', citizen_route_schedules_view),
+    path("api/citizen/route-schedules/", citizen_route_schedules_view),
 
     # ======================
     #     ADMIN (API)
     # ======================
-    path('api/admin/users/', admin_users_view),
-    path('api/admin/reports/', admin_reports_view),
-    path('api/admin/reports/<int:pk>/', admin_report_detail_view),
+    path("api/admin/users/", admin_users_view),
+    path("api/admin/reports/", admin_reports_view),
+    path("api/admin/reports/<int:pk>/", admin_report_detail_view),
 
     # 🔥 Generar informe JSON
-    path('api/admin/reports/generate/', generate_reports_view),
+    path("api/admin/reports/generate/", generate_reports_view),
 
     # 🔥 Generar PDF
-    path('api/admin/reports/generate-pdf/', generate_reports_pdf_view),
+    path("api/admin/reports/generate-pdf/", generate_reports_pdf_view),
 
     # 🔥 Rutas
-    path('api/admin/routes/', admin_routes_view),
-    path('api/admin/routes/<int:pk>/', admin_route_detail_view),
+    path("api/admin/routes/", admin_routes_view),
+    path("api/admin/routes/<int:pk>/", admin_route_detail_view),
 
     # 🔥 Fechas de ruta
-    path('api/admin/route-dates/', admin_route_dates_view),
+    path("api/admin/route-dates/", admin_route_dates_view),
 
     # 🔥 Horarios de ruta (admin)
-    path('api/admin/route-schedules/', admin_route_schedules_view),
-    path('api/admin/route-schedules/<int:pk>/', admin_route_schedule_delete_view),
+    path("api/admin/route-schedules/", admin_route_schedules_view),
+    path("api/admin/route-schedules/<int:pk>/", admin_route_schedule_delete_view),
 
     # 🔥 Mensajes
-    path('api/admin/messages/', send_message_view),
+    path("api/admin/messages/", send_message_view),
 
     # ======================
     # ✅✅✅ NUEVO: COMUNIDADES (ADMIN)
     # ======================
-    # Catálogo de comunidades
-    path('api/admin/communities/', communities_view),
-    path('api/admin/communities/<int:pk>/', community_detail_view),
+    path("api/admin/communities/", communities_view),
+    path("api/admin/communities/<int:pk>/", community_detail_view),
 
     # Asignación de comunidades a rutas
     # GET: /api/admin/route-communities/?route_id=1
-    path('api/admin/route-communities/', route_communities_view),
-    path('api/admin/route-communities/<int:pk>/', route_community_delete_view),
+    path("api/admin/route-communities/", route_communities_view),
+    path("api/admin/route-communities/<int:pk>/", route_community_delete_view),
 
     # ======================
     #     VEHÍCULO
     # ======================
-    path('api/vehicles/<int:vehicle_id>/', vehicle_detail),
-    path('api/vehicles/<int:vehicle_id>/update-location/', vehicle_update),
+    path("api/vehicles/<int:vehicle_id>/", vehicle_detail),
+    path("api/vehicles/<int:vehicle_id>/update-location/", vehicle_update),
 
     # Crear vehículo por defecto
-    path('api/admin/create-default-vehicle/', create_default_vehicle),
+    path("api/admin/create-default-vehicle/", create_default_vehicle),
 
     # ======================
     #   SUBIR FOTO PERFIL
     # ======================
-    path('api/upload-profile-picture/', upload_profile_picture),
+    path("api/upload-profile-picture/", upload_profile_picture),
 ]
 
 # ========================================
-# 📸 SERVIR MEDIA EN DESARROLLO
+# 📸 SERVIR MEDIA EN DESARROLLO (SOLO DEBUG=True)
+# En producción esto NO aplica (correcto).
 # ========================================
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
