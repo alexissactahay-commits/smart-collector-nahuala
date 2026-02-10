@@ -896,3 +896,18 @@ def send_message_view(request):
     )
 
     return Response({"message": "Mensaje enviado correctamente."}, status=201)
+
+
+# ======================================================
+# ✅✅✅ ENDPOINT DE SALUD (HEALTH CHECK)
+# - No requiere autenticación
+# - Sirve para verificar rápido que el backend está RUNNING
+# ======================================================
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def health_view(request):
+    return Response({
+        "status": "ok",
+        "service": "smart-collector-backend",
+        "time": timezone.now().isoformat()
+    }, status=200)

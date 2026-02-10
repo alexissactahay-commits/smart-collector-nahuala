@@ -12,6 +12,9 @@ from core.views import (
     forgot_password_view,
     google_login,
 
+    # ✅✅✅ HEALTH (DRF) - NUEVO
+    health_view,
+
     # Ciudadano
     my_routes_view,
     my_reports_view,
@@ -54,17 +57,20 @@ from core.views import (
     upload_profile_picture,
 )
 
-# ✅ Health check rápido (para verificar que está RUNNING)
-def health_view(request):
+# ✅ Health check simple (sin DRF) - lo dejamos para diagnóstico rápido
+def simple_health_view(request):
     return JsonResponse({"status": "ok"}, status=200)
 
 urlpatterns = [
     # ✅ Admin real de Django (dejar ambos para evitar confusión)
     path("dj-admin/", admin.site.urls),
-    path("admin/", admin.site.urls),  # ✅ ahora /admin/ también funcionará
+    path("admin/", admin.site.urls),
 
-    # ✅ Health check
-    path("health/", health_view, name="health"),
+    # ✅ Health check simple
+    path("health/", simple_health_view, name="health"),
+
+    # ✅✅✅ Health check API (DRF) - el que usaremos para pruebas con frontend
+    path("api/health/", health_view),
 
     # Home
     path("", home_view, name="home"),
