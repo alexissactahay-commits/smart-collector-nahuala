@@ -16,16 +16,28 @@ SECRET_KEY = config("SECRET_KEY", default="django-insecure-local-key")
 
 # ======================================================
 # DEBUG (EN LOCAL DEBE SER TRUE)
+# ✅ 1.1: Controlado por variable de entorno
 # ======================================================
-DEBUG = True
+DEBUG = config("DEBUG", default=True, cast=bool)
 
 # ======================================================
-# ALLOWED HOSTS
+# ✅ 1.2 ALLOWED HOSTS (POR VARIABLE DE ENTORNO)
 # ======================================================
-ALLOWED_HOSTS = [
-    "127.0.0.1",
-    "localhost",
-]
+allowed_hosts_raw = config("ALLOWED_HOSTS", default="127.0.0.1,localhost")
+ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_raw.split(",") if h.strip()]
+
+# Producción (Render): agrega hosts extra para evitar DisallowedHost
+IS_PRODUCTION = not DEBUG  # regla simple: si DEBUG=False => producción
+
+if IS_PRODUCTION:
+    # Permite cualquier subdominio de Render
+    if ".onrender.com" not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(".onrender.com")
+
+    # Si Render provee hostname externo, lo agregamos
+    render_host = os.getenv("RENDER_EXTERNAL_HOSTNAME")
+    if render_host and render_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(render_host)
 
 # ======================================================
 # INSTALLED APPS
@@ -60,10 +72,12 @@ SITE_ID = 1
 
 # ======================================================
 # MIDDLEWARE
+# ✅ 1.4: WhiteNoise para servir estáticos en producción
 # ======================================================
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
 
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -98,35 +112,69 @@ TEMPLATES = [
 ]
 
 # ======================================================
-# DATABASE (LOCAL POSTGRES)
+# ✅ 1.5 DATABASE (LOCAL + PRODUCCIÓN RENDER)
+# - Local: usa postgres local (ssl=False)
+# - Render: DATABASE_URL viene de Render y se exige ssl=True
 # ======================================================
+DATABASE_URL = config(
+    "DATABASE_URL",
+    default="postgres://postgres:postgres@localhost:5432/smart_collector_nahuala"
+)
+
 DATABASES = {
     "default": dj_database_url.parse(
-        config(
-            "DATABASE_URL",
-            default="postgres://postgres:postgres@localhost:5432/smart_collector_nahuala"
-        ),
+        DATABASE_URL,
         conn_max_age=600,
-        ssl_require=False,
+        ssl_require=IS_PRODUCTION,  # Render requiere SSL
     )
 }
 
 # ======================================================
-# CORS / CSRF (CLAVE PARA REACT)
+# ✅ 1.3 CORS / CSRF (SEGURO PARA LOCAL + PRODUCCIÓN)
 # ======================================================
-CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
+CORS_ALLOWED_ORIGINS = config(
+    "CORS_ALLOWED_ORIGINS",
+    default="http://localhost:3000,http://127.0.0.1:3000",
+).split(",")
+CORS_ALLOWED_ORIGINS = [o.strip() for o in CORS_ALLOWED_ORIGINS if o.strip()]
+
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default="http://localhost:3000,http://127.0.0.1:3000",
+).split(",")
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in CSRF_TRUSTED_ORIGINS if o.strip()]
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
 ]
 
 # ======================================================
-# STATIC FILES
+# ✅ 1.4 STATIC FILES (WhiteNoise)
 # ======================================================
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Evita warning si la carpeta no existe en algún entorno
+_static_dir = BASE_DIR / "static"
+if _static_dir.exists():
+    STATICFILES_DIRS = [_static_dir]
+else:
+    STATICFILES_DIRS = []
+
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
 
 # ======================================================
 # MEDIA FILES
@@ -170,7 +218,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ======================================================
 # EMAIL (LOCAL - DESARROLLO)
-# ✅ NO intenta conectarse a SMTP, imprime el correo en consola
 # ======================================================
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 DEFAULT_FROM_EMAIL = "no-reply@smartcollector.local"
