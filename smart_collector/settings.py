@@ -134,6 +134,7 @@ DATABASES = {
 # ======================================================
 CORS_ALLOW_CREDENTIALS = True
 
+# ORIGINS permitidos por ENV (default local)
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
     default="http://localhost:3000,http://127.0.0.1:3000",
@@ -146,6 +147,24 @@ CSRF_TRUSTED_ORIGINS = config(
 ).split(",")
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in CSRF_TRUSTED_ORIGINS if o.strip()]
 
+# ✅ FIX PRODUCCIÓN: agregar dominios reales si no vienen en ENV
+if IS_PRODUCTION:
+    prod_frontends = [
+        "https://smartcollectornahuala.com",
+        "https://www.smartcollectornahuala.com",
+    ]
+    for origin in prod_frontends:
+        if origin not in CORS_ALLOWED_ORIGINS:
+            CORS_ALLOWED_ORIGINS.append(origin)
+        if origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin)
+
+    # Para evitar problemas con CSRF/HTTPS en algunas rutas
+    api_origin = "https://api.smartcollectornahuala.com"
+    if api_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(api_origin)
+
+# Headers permitidos (incluye Authorization para JWT)
 CORS_ALLOW_HEADERS = [
     "accept",
     "accept-encoding",
