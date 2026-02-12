@@ -12,6 +12,7 @@ const SendMessage = () => {
   const [message, setMessage] = useState('');
   const [sentMessages, setSentMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [alert, setAlert] = useState({ message: '', type: '' });
 
   const token = localStorage.getItem('token');
@@ -40,6 +41,12 @@ const SendMessage = () => {
     return [];
   };
 
+  const handleAuthFail = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userRole');
+    navigate('/login', { replace: true });
+  }, [navigate]);
+
   const fetchUsers = useCallback(async () => {
     try {
       const res = await axios.get(`${API_URL}/admin/users/`, {
@@ -53,18 +60,15 @@ const SendMessage = () => {
       console.error('Error al cargar usuarios:', err.response?.data || err.message);
 
       if (err.response?.status === 401 || err.response?.status === 403) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('userRole');
-        navigate('/login', { replace: true });
+        handleAuthFail();
         return;
       }
 
       setAlert({ message: 'Error al cargar la lista de usuarios.', type: 'error' });
     }
-  }, [API_URL, token, navigate]);
+  }, [API_URL, token, handleAuthFail]);
 
-  // ✅ Historial: solo si el backend lo permite.
-  // Si responde 405, NO mostramos error (solo informamos).
+  // ✅ Historial: si el backend no permite GET (405) no es error fatal
   const fetchSentMessages = useCallback(async () => {
     try {
       const res = await axios.get(`${API_URL}/admin/messages/`, {
@@ -76,7 +80,6 @@ const SendMessage = () => {
     } catch (err) {
       const status = err.response?.status;
 
-      // 🔥 Tu caso: GET no permitido -> 405
       if (status === 405) {
         setSentMessages([]);
         setAlert({
@@ -89,15 +92,13 @@ const SendMessage = () => {
       console.error('Error al cargar mensajes enviados:', err.response?.data || err.message);
 
       if (status === 401 || status === 403) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('userRole');
-        navigate('/login', { replace: true });
+        handleAuthFail();
         return;
       }
 
       setAlert({ message: 'Error al cargar el historial de mensajes.', type: 'error' });
     }
-  }, [API_URL, token, navigate]);
+  }, [API_URL, token, handleAuthFail]);
 
   useEffect(() => {
     if (!token) return;
@@ -129,15 +130,63 @@ const SendMessage = () => {
       setMessage('');
       setSelectedRecipientId('');
 
-      // ✅ Intentamos recargar historial (si el backend ya lo permite)
       await fetchSentMessages();
-
       setTimeout(() => setAlert({ message: '', type: '' }), 2500);
     } catch (err) {
       console.error('Error al enviar mensaje:', err.response?.data || err.message);
+
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        handleAuthFail();
+        return;
+      }
+
       setAlert({ message: 'Error al enviar el mensaje. Inténtalo de nuevo.', type: 'error' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ NUEVO: eliminar mensaje (ADMIN)
+  // Requiere endpoint: DELETE /api/admin/messages/<id>/
+  const handleDeleteMessage = async (id) => {
+    if (!id) return;
+
+    const ok = window.confirm('¿Seguro que deseas eliminar este mensaje? (Se eliminará para todos)');
+    if (!ok) return;
+
+    setDeletingId(id);
+
+    try {
+      await axios.delete(`${API_URL}/admin/messages/${id}/`, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 15000,
+      });
+
+      // Quitarlo de la lista local para reflejar al instante
+      setSentMessages((prev) => prev.filter((m) => m.id !== id));
+
+      setAlert({ message: 'Mensaje eliminado correctamente.', type: 'success' });
+      setTimeout(() => setAlert({ message: '', type: '' }), 2000);
+    } catch (err) {
+      console.error('Error al eliminar mensaje:', err.response?.data || err.message);
+
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        handleAuthFail();
+        return;
+      }
+
+      // Si el backend aún no tiene el DELETE
+      if (err.response?.status === 405) {
+        setAlert({
+          message: 'El servidor aún no permite eliminar mensajes (falta implementar DELETE en backend).',
+          type: 'warning'
+        });
+        return;
+      }
+
+      setAlert({ message: 'No se pudo eliminar el mensaje.', type: 'error' });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -194,6 +243,25 @@ const SendMessage = () => {
               <p><strong>Mensaje:</strong> {msg.message}</p>
               <p><strong>Estado:</strong> {msg.estado || 'N/A'}</p>
               <p><strong>Fecha:</strong> {msg.created_at ? new Date(msg.created_at).toLocaleString() : 'N/A'}</p>
+
+              {/* ✅ NUEVO BOTÓN ELIMINAR */}
+              <button
+                type="button"
+                onClick={() => handleDeleteMessage(msg.id)}
+                disabled={deletingId === msg.id}
+                style={{
+                  marginTop: '10px',
+                  background: '#d90429',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  cursor: deletingId === msg.id ? 'not-allowed' : 'pointer',
+                  fontWeight: 700,
+                }}
+              >
+                {deletingId === msg.id ? 'Eliminando...' : 'Eliminar'}
+              </button>
             </div>
           ))}
         </div>

@@ -382,7 +382,6 @@ def admin_route_dates_view(request):
 
     if request.method == "GET":
         fechas = RouteDate.objects.select_related("route").order_by("date")
-        # ✅ usar serializer (ya incluye route embebida)
         serializer = RouteDateSerializer(fechas, many=True)
         return Response(serializer.data, status=200)
 
@@ -398,7 +397,6 @@ def admin_route_dates_view(request):
         except Route.DoesNotExist:
             return Response({"error": "Ruta no encontrada"}, status=404)
 
-        # ✅ evitar duplicado por unique_together (route, date)
         if RouteDate.objects.filter(route=route, date=date).exists():
             return Response({"error": "Esa fecha ya está asignada a esta ruta."}, status=400)
 
@@ -482,24 +480,17 @@ def admin_route_schedule_delete_view(request, pk):
 @api_view(["GET", "POST"])
 @permission_classes([IsAdminUser])
 def communities_view(request):
-    """
-    Catálogo de comunidades:
-    - GET: lista
-    - POST: crea comunidad {name}
-    """
     if request.method == "GET":
         communities = Community.objects.all().order_by("name")
         serializer = CommunitySerializer(communities, many=True)
         return Response(serializer.data, status=200)
 
-    # POST
     name = request.data.get("name")
     if not name or not str(name).strip():
         return Response({"error": "El nombre de la comunidad es obligatorio."}, status=400)
 
     name = str(name).strip()
 
-    # Evitar duplicados por unique=True
     if Community.objects.filter(name__iexact=name).exists():
         return Response({"error": "Esa comunidad ya existe."}, status=400)
 
@@ -510,10 +501,6 @@ def communities_view(request):
 @api_view(["PUT", "PATCH", "DELETE"])
 @permission_classes([IsAdminUser])
 def community_detail_view(request, pk):
-    """
-    - PUT/PATCH: editar nombre
-    - DELETE: eliminar comunidad (si está asignada, borra relaciones por cascade)
-    """
     community = get_object_or_404(Community, pk=pk)
 
     if request.method in ["PUT", "PATCH"]:
@@ -523,7 +510,6 @@ def community_detail_view(request, pk):
 
         name = str(name).strip()
 
-        # Evitar duplicar contra otras comunidades
         if Community.objects.filter(name__iexact=name).exclude(pk=community.pk).exists():
             return Response({"error": "Ya existe otra comunidad con ese nombre."}, status=400)
 
@@ -531,7 +517,6 @@ def community_detail_view(request, pk):
         community.save()
         return Response(CommunitySerializer(community).data, status=200)
 
-    # DELETE
     community.delete()
     return Response({"message": "Comunidad eliminada correctamente."}, status=200)
 
@@ -539,11 +524,6 @@ def community_detail_view(request, pk):
 @api_view(["GET", "POST"])
 @permission_classes([IsAdminUser])
 def route_communities_view(request):
-    """
-    Asignación de comunidades a rutas:
-    - GET /api/route-communities/?route_id=1  -> lista asignadas a esa ruta
-    - POST {route_id, community_id} -> asigna
-    """
     if request.method == "GET":
         route_id = request.query_params.get("route_id")
         if not route_id:
@@ -553,7 +533,6 @@ def route_communities_view(request):
         serializer = RouteCommunitySerializer(qs, many=True)
         return Response(serializer.data, status=200)
 
-    # POST
     route_id = request.data.get("route_id")
     community_id = request.data.get("community_id")
 
@@ -580,9 +559,6 @@ def route_communities_view(request):
 @api_view(["DELETE"])
 @permission_classes([IsAdminUser])
 def route_community_delete_view(request, pk):
-    """
-    Quitar una comunidad de una ruta (borra solo la relación RouteCommunity)
-    """
     rc = get_object_or_404(RouteCommunity, pk=pk)
     rc.delete()
     return Response({"message": "Comunidad quitada de la ruta correctamente."}, status=200)
@@ -593,15 +569,9 @@ def route_community_delete_view(request, pk):
 # ====================================
 
 def _prefetch_route_communities(qs):
-    """
-    Prefetch compatible para distintas configuraciones de related_name.
-    Si tu RouteCommunity tiene related_name='route_communities' o 'community_routes',
-    esto ayuda a que el serializer pueda resolver communities sin N+1.
-    """
     try:
         return qs.prefetch_related("route__route_communities__community")
     except Exception:
-        # fallback si el related_name fuera diferente (por ejemplo community_routes)
         return qs.prefetch_related("route__community_routes__community")
 
 
@@ -609,7 +579,7 @@ def _prefetch_route_communities(qs):
 @permission_classes([IsAuthenticated])
 def my_routes_view(request):
     fechas = RouteDate.objects.select_related("route").order_by("date")
-    fechas = _prefetch_route_communities(fechas)  # ✅ importante
+    fechas = _prefetch_route_communities(fechas)
     serializer = RouteDateSerializer(fechas, many=True)
     return Response(serializer.data, status=200)
 
@@ -618,12 +588,11 @@ def my_routes_view(request):
 @permission_classes([IsAuthenticated])
 def citizen_calendar_view(request):
     fechas = RouteDate.objects.select_related("route").order_by("date")
-    fechas = _prefetch_route_communities(fechas)  # ✅ importante
+    fechas = _prefetch_route_communities(fechas)
     serializer = RouteDateSerializer(fechas, many=True)
     return Response(serializer.data, status=200)
 
 
-# ✅✅✅ FIX: HORARIOS PARA CIUDADANO (SIN 500)
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def citizen_route_schedules_view(request):
@@ -747,7 +716,17 @@ def upload_profile_picture(request):
 def my_notifications_view(request):
     user = request.user
 
-    mensajes = Notification.objects.filter(usuario=user).order_by("-created_at")
+    # ✅✅✅ FILTRO: no mostrar borrados globales ni borrados por el mismo usuario
+    mensajes = (
+        Notification.objects
+        .filter(
+            usuario=user,
+            deleted_globally=False,
+            deleted_by_user=False
+        )
+        .select_related("sender")
+        .order_by("-created_at")
+    )
 
     data = [
         {
@@ -755,11 +734,37 @@ def my_notifications_view(request):
             "message": m.message,
             "estado": m.estado,
             "created_at": m.created_at,
+            "sender": {
+                "id": m.sender.id,
+                "username": m.sender.username,
+                "email": m.sender.email
+            } if m.sender else None
         }
         for m in mensajes
     ]
 
     return Response(data, status=200)
+
+
+# ✅✅✅ NUEVO: CIUDADANO BORRA MENSAJE (solo para sí mismo)
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def my_notification_delete_view(request, pk):
+    user = request.user
+
+    n = get_object_or_404(Notification, pk=pk, usuario=user)
+
+    # Si ya lo borró el admin globalmente, respondemos ok igual
+    if getattr(n, "deleted_globally", False):
+        return Response({"message": "El mensaje ya fue eliminado por administración."}, status=200)
+
+    # Marcar borrado por el usuario
+    n.deleted_by_user = True
+    if not n.deleted_at:
+        n.deleted_at = timezone.now()
+    n.save(update_fields=["deleted_by_user", "deleted_at"])
+
+    return Response({"message": "Mensaje eliminado correctamente."}, status=200)
 
 
 # ====================================
@@ -782,7 +787,6 @@ def generate_reports_view(request):
 #   🚀 FUNCIÓN EXTRA 2 — PDF DE REPORTES
 # ====================================
 
-# ✅✅✅ FIX PDF: Renderer para evitar 406 por Accept header
 class PDFRenderer(BaseRenderer):
     media_type = "application/pdf"
     format = "pdf"
@@ -826,7 +830,7 @@ def generate_reports_pdf_view(request):
 
 
 # ====================================
-#   🚀 FUNCIÓN EXTRA 3 — ENVIAR MENSAJE
+#   🚀 FUNCIÓN EXTRA 3 — ENVIAR MENSAJE (ADMIN)
 # ====================================
 
 @api_view(["GET", "POST"])
@@ -838,23 +842,45 @@ def send_message_view(request):
         except ValueError:
             limit = 50
 
+        # ✅✅✅ FILTRO: no mostrar borrados globales
         mensajes = (
             Notification.objects
-            .select_related("usuario")
+            .select_related("usuario", "sender")
+            .filter(deleted_globally=False)
             .order_by("-created_at")[:limit]
         )
 
-        data = [
-            {
+        data = []
+        for m in mensajes:
+            usuario_obj = None
+            if m.usuario:
+                usuario_obj = {
+                    "id": m.usuario.id,
+                    "username": m.usuario.username,
+                    "email": m.usuario.email
+                }
+
+            data.append({
                 "id": m.id,
+
+                # compatibilidad
                 "user_id": m.usuario.id if m.usuario else None,
                 "username": m.usuario.username if m.usuario else None,
+
+                # ✅ recomendado para tu frontend: msg.usuario?.username
+                "usuario": usuario_obj,
+
                 "message": m.message,
                 "estado": m.estado,
                 "created_at": m.created_at,
-            }
-            for m in mensajes
-        ]
+
+                "sender": {
+                    "id": m.sender.id,
+                    "username": m.sender.username,
+                    "email": m.sender.email
+                } if m.sender else None,
+            })
+
         return Response(data, status=200)
 
     user_id = request.data.get("user_id")
@@ -867,6 +893,9 @@ def send_message_view(request):
     if not message:
         return Response({"error": "message no puede ir vacío."}, status=400)
 
+    # ✅ guardamos sender para auditoría
+    sender_user = request.user
+
     if user_id in [None, "", "all", "ALL", "todos", "TODOS"]:
         users = User.objects.filter(is_active=True)
 
@@ -874,6 +903,7 @@ def send_message_view(request):
         for u in users:
             Notification.objects.create(
                 usuario=u,
+                sender=sender_user,
                 message=message,
                 estado="pendiente"
             )
@@ -891,6 +921,7 @@ def send_message_view(request):
 
     Notification.objects.create(
         usuario=user,
+        sender=sender_user,
         message=message,
         estado="pendiente"
     )
@@ -898,10 +929,23 @@ def send_message_view(request):
     return Response({"message": "Mensaje enviado correctamente."}, status=201)
 
 
+# ✅✅✅ NUEVO: ADMIN BORRA MENSAJE (GLOBAL)
+@api_view(["DELETE"])
+@permission_classes([IsAdminUser])
+def admin_message_delete_view(request, pk):
+    n = get_object_or_404(Notification, pk=pk)
+
+    # Marcar borrado global
+    n.deleted_globally = True
+    if not n.deleted_at:
+        n.deleted_at = timezone.now()
+    n.save(update_fields=["deleted_globally", "deleted_at"])
+
+    return Response({"message": "Mensaje eliminado globalmente."}, status=200)
+
+
 # ======================================================
 # ✅✅✅ ENDPOINT DE SALUD (HEALTH CHECK)
-# - No requiere autenticación
-# - Sirve para verificar rápido que el backend está RUNNING
 # ======================================================
 @api_view(["GET"])
 @permission_classes([AllowAny])

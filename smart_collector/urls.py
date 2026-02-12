@@ -25,6 +25,9 @@ from core.views import (
     # ✅ Horarios ciudadano
     citizen_route_schedules_view,
 
+    # ✅✅✅ NUEVO: borrar notificación para el usuario (soft delete)
+    my_notification_delete_view,
+
     # Admin (API)
     admin_users_view,
     admin_reports_view,
@@ -37,6 +40,9 @@ from core.views import (
     admin_route_schedules_view,
     admin_route_schedule_delete_view,
     send_message_view,
+
+    # ✅✅✅ NUEVO: borrar mensaje global (admin)
+    admin_message_delete_view,
 
     # ✅✅✅ NUEVO: Comunidades y asignación a rutas
     communities_view,
@@ -98,6 +104,9 @@ urlpatterns = [
     path("api/my-reports/", my_reports_view),
     path("api/my-notifications/", my_notifications_view),
 
+    # ✅✅✅ NUEVO: borrar notificación para el usuario (soft delete)
+    path("api/my-notifications/<int:pk>/", my_notification_delete_view),
+
     # ✅ RUTAS CON PUNTOS (para mapa ciudadano)
     path("api/routes/", citizen_routes_with_points_view),
 
@@ -130,6 +139,9 @@ urlpatterns = [
 
     # 🔥 Mensajes
     path("api/admin/messages/", send_message_view),
+
+    # ✅✅✅ NUEVO: borrar mensaje global (admin)
+    path("api/admin/messages/<int:pk>/", admin_message_delete_view),
 
     # ======================
     # ✅✅✅ NUEVO: COMUNIDADES (ADMIN)

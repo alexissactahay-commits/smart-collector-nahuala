@@ -127,16 +127,46 @@ class RouteCommunity(models.Model):
 
 
 class Notification(models.Model):
+    """
+    Mensajes / notificaciones.
+
+    ✅ NUEVO (para borrar sin romper historial):
+    - deleted_by_user: el ciudadano lo "borra" solo para sí mismo
+    - deleted_globally: el admin lo borra para todos (ya no aparece ni a admin ni a ciudadano)
+    - deleted_at: fecha de borrado (auditoría)
+    """
     ESTADOS = (
         ('enviada', 'Enviada'),
         ('pendiente', 'Pendiente'),
         ('leida', 'Leída'),
     )
+
     message = models.CharField(max_length=150)
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_notifications')
-    sender = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='sent_notifications')
+    sender = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sent_notifications'
+    )
     estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
     created_at = models.DateTimeField(auto_now_add=True)
+
+    # ✅✅✅ CAMPOS NUEVOS PARA BORRADO
+    deleted_by_user = models.BooleanField(default=False, verbose_name="Borrado por usuario")
+    deleted_globally = models.BooleanField(default=False, verbose_name="Borrado por admin (global)")
+    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de borrado")
+
+    class Meta:
+        verbose_name = "Notificación"
+        verbose_name_plural = "Notificaciones"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["usuario", "created_at"]),
+            models.Index(fields=["deleted_globally", "created_at"]),
+            models.Index(fields=["deleted_by_user", "created_at"]),
+        ]
 
     def __str__(self):
         return f"Notificación para {self.usuario.username}: {self.message}"
