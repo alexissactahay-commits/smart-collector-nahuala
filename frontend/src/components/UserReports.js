@@ -101,6 +101,35 @@ const UserReports = () => {
     }
   };
 
+  // ===========================
+  // ✅ NUEVO: Eliminar reporte (ADMIN)
+  // Endpoint: DELETE /api/my-reports/<id>/
+  // ===========================
+  const handleDeleteReport = async (id) => {
+    if (!window.confirm("¿Seguro que deseas eliminar este reporte?")) return;
+
+    try {
+      await api.delete(`/api/my-reports/${id}/`);
+
+      // quitar de la tabla sin recargar
+      setReports((prev) => prev.filter((r) => r.id !== id));
+
+      setMessage("Reporte eliminado correctamente");
+      setTimeout(() => setMessage(""), 3000);
+    } catch (error) {
+      console.error("Error al eliminar reporte:", error);
+
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        localStorage.clear();
+        navigate("/login", { replace: true });
+        return;
+      }
+
+      setMessage("Error al eliminar el reporte");
+      setTimeout(() => setMessage(""), 3000);
+    }
+  };
+
   useEffect(() => {
     fetchReports();
   }, [fetchReports]);
@@ -122,6 +151,7 @@ const UserReports = () => {
             <th>Detalle</th>
             <th>Fecha</th>
             <th>Estado</th>
+            <th>Acciones</th> {/* ✅ NUEVO */}
           </tr>
         </thead>
 
@@ -136,16 +166,12 @@ const UserReports = () => {
                   <td>{getUsername(report)}</td>
                   <td>{detail || "Sin detalle"}</td>
                   <td>
-                    {rawDate
-                      ? new Date(rawDate).toLocaleString()
-                      : "No disponible"}
+                    {rawDate ? new Date(rawDate).toLocaleString() : "No disponible"}
                   </td>
                   <td>
                     <select
                       value={report.status || "pending"}
-                      onChange={(e) =>
-                        handleUpdateStatus(report.id, e.target.value)
-                      }
+                      onChange={(e) => handleUpdateStatus(report.id, e.target.value)}
                       className="status-select"
                     >
                       <option value="pending">Pendiente</option>
@@ -153,12 +179,29 @@ const UserReports = () => {
                       <option value="unresolved">No Resuelto</option>
                     </select>
                   </td>
+
+                  {/* ✅ NUEVO: botón eliminar */}
+                  <td>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteReport(report.id)}
+                      className="btn-delete-report"
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: "8px",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  </td>
                 </tr>
               );
             })
           ) : (
             <tr>
-              <td colSpan="4" style={{ textAlign: "center" }}>
+              <td colSpan="5" style={{ textAlign: "center" }}>
                 No hay reportes disponibles
               </td>
             </tr>

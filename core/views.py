@@ -651,6 +651,30 @@ def my_reports_view(request):
         serializer = ReportSerializer(report)
         return Response(serializer.data, status=201)
 
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def my_report_delete_view(request, pk):
+    """
+    Permite eliminar un reporte:
+    - Ciudadano: solo puede eliminar sus propios reportes
+    - Admin: puede eliminar cualquier reporte
+    """
+    try:
+        report = Report.objects.get(pk=pk)
+    except Report.DoesNotExist:
+        return Response({"error": "Reporte no encontrado."}, status=404)
+
+    # ✅ Admin puede borrar cualquiera
+    if request.user.role == "admin":
+        report.delete()
+        return Response({"message": "Reporte eliminado por admin."}, status=200)
+
+    # ✅ Ciudadano solo puede borrar los suyos
+    if report.user_id != request.user.id:
+        return Response({"error": "No tienes permisos para eliminar este reporte."}, status=403)
+
+    report.delete()
+    return Response({"message": "Reporte eliminado correctamente."}, status=200)
 
 # ====================================
 #   OTROS

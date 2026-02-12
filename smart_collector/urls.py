@@ -22,6 +22,9 @@ from core.views import (
     citizen_routes_with_points_view,
     citizen_calendar_view,
 
+    # ✅✅✅ NUEVO: borrar reporte (ciudadano: solo propios / admin: cualquiera)
+    my_report_delete_view,
+
     # ✅ Horarios ciudadano
     citizen_route_schedules_view,
 
@@ -101,7 +104,13 @@ urlpatterns = [
     # ======================
     path("api/my-routes/", my_routes_view),
     path("api/calendar/", citizen_calendar_view),
+
+    # ✅ Reportes ciudadano (GET/POST)
     path("api/my-reports/", my_reports_view),
+
+    # ✅✅✅ NUEVO: borrar reporte (DELETE)
+    path("api/my-reports/<int:pk>/", my_report_delete_view),
+
     path("api/my-notifications/", my_notifications_view),
 
     # ✅✅✅ NUEVO: borrar notificación para el usuario (soft delete)
