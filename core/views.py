@@ -1,12 +1,19 @@
 import requests
+import logging
+
 from django.shortcuts import render, get_object_or_404
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
-from django.core.mail import send_mail
+
+# ✅ CAMBIO: usamos EmailMultiAlternatives para HTML y strip_tags para texto
+from django.core.mail import EmailMultiAlternatives
+from django.utils.html import strip_tags
+
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
 from django.template.loader import render_to_string
+
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -46,6 +53,8 @@ from .serializers import (
     UserSerializer, RouteDateSerializer, RouteScheduleSerializer,
     VehicleSerializer, CommunitySerializer, RouteCommunitySerializer
 )
+
+logger = logging.getLogger(__name__)
 
 # ====================================
 #   LOGIN Y REGISTRO
@@ -152,6 +161,12 @@ def change_password(request):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def forgot_password_view(request):
+    """
+    ✅ FIX:
+    - Usa FRONTEND_BASE_URL desde settings/env
+    - Envía HTML real (EmailMultiAlternatives)
+    - NO revienta con 500 si SMTP falla (regresa 200 y loguea error)
+    """
     email = request.data.get("email")
     if not email:
         return Response({"error": "El correo es obligatorio."}, status=400)
@@ -159,22 +174,40 @@ def forgot_password_view(request):
     try:
         user = User.objects.get(email__iexact=email)
     except User.DoesNotExist:
-        return Response({"message": "Si el correo está registrado, recibirás instrucciones."})
+        # ✅ no revelar si existe o no
+        return Response({"message": "Si el correo está registrado, recibirás instrucciones."}, status=200)
 
     uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
 
-    host = request.get_host()
-    base_url = "https://smartcollectornahuala.com" if "localhost" not in host else "http://localhost:3000"
-
+    base_url = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
     reset_url = f"{base_url}/reset-password/{uidb64}/{token}/"
 
     subject = "Restablecimiento de contraseña - Smart Collector"
-    message = render_to_string("password_reset_email.html", {"user": user, "reset_url": reset_url})
 
-    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+    # HTML desde template
+    html_message = render_to_string(
+        "password_reset_email.html",
+        {"user": user, "reset_url": reset_url}
+    )
+    text_message = strip_tags(html_message)
 
-    return Response({"message": "Si el correo existe, recibirás instrucciones."})
+    try:
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        msg.attach_alternative(html_message, "text/html")
+        msg.send(fail_silently=False)
+
+        return Response({"message": "Si el correo existe, recibirás instrucciones."}, status=200)
+
+    except Exception as e:
+        logger.exception("ERROR enviando correo de reset: %s", repr(e))
+        # ✅ no tiramos 500 al frontend
+        return Response({"message": "Si el correo existe, recibirás instrucciones."}, status=200)
 
 
 # ====================================
@@ -407,7 +440,6 @@ def admin_route_dates_view(request):
         return Response(RouteDateSerializer(nueva_fecha).data, status=201)
 
 
-# ✅✅✅ NUEVO: DELETE FECHAS (para que no dé 404 al eliminar)
 @api_view(["DELETE"])
 @permission_classes([IsAdminUser])
 def admin_route_date_delete_view(request, pk):
@@ -667,11 +699,6 @@ def my_reports_view(request):
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def my_report_delete_view(request, pk):
-    """
-    Permite eliminar un reporte:
-    - Ciudadano: solo puede eliminar sus propios reportes
-    - Admin: puede eliminar cualquier reporte
-    """
     try:
         report = Report.objects.get(pk=pk)
     except Report.DoesNotExist:
