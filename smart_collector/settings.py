@@ -16,18 +16,18 @@ SECRET_KEY = config("SECRET_KEY", default="django-insecure-local-key")
 
 # ======================================================
 # DEBUG (EN LOCAL DEBE SER TRUE)
-# ✅ 1.1: Controlado por variable de entorno
+# ✅ Controlado por variable de entorno
 # ======================================================
 DEBUG = config("DEBUG", default=True, cast=bool)
 
 # ======================================================
-# ✅ 1.2 ALLOWED HOSTS (POR VARIABLE DE ENTORNO)
+# ✅ ALLOWED HOSTS (POR VARIABLE DE ENTORNO)
 # ======================================================
 allowed_hosts_raw = config("ALLOWED_HOSTS", default="127.0.0.1,localhost")
 ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_raw.split(",") if h.strip()]
 
 # Producción (Render): agrega hosts extra para evitar DisallowedHost
-IS_PRODUCTION = not DEBUG  # regla simple: si DEBUG=False => producción
+IS_PRODUCTION = not DEBUG  # si DEBUG=False => producción
 
 if IS_PRODUCTION:
     # Permite cualquier subdominio de Render
@@ -72,7 +72,7 @@ SITE_ID = 1
 
 # ======================================================
 # MIDDLEWARE
-# ✅ 1.4: WhiteNoise para servir estáticos en producción
+# ✅ WhiteNoise para servir estáticos en producción
 # ======================================================
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -112,9 +112,7 @@ TEMPLATES = [
 ]
 
 # ======================================================
-# ✅ 1.5 DATABASE (LOCAL + PRODUCCIÓN RENDER)
-# - Local: usa postgres local (ssl=False)
-# - Render: DATABASE_URL viene de Render y se exige ssl=True
+# DATABASE (LOCAL + PRODUCCIÓN RENDER)
 # ======================================================
 DATABASE_URL = config(
     "DATABASE_URL",
@@ -125,16 +123,15 @@ DATABASES = {
     "default": dj_database_url.parse(
         DATABASE_URL,
         conn_max_age=600,
-        ssl_require=IS_PRODUCTION,  # Render requiere SSL
+        ssl_require=IS_PRODUCTION,
     )
 }
 
 # ======================================================
-# ✅ 1.3 CORS / CSRF (SEGURO PARA LOCAL + PRODUCCIÓN)
+# CORS / CSRF
 # ======================================================
 CORS_ALLOW_CREDENTIALS = True
 
-# ORIGINS permitidos por ENV (default local)
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
     default="http://localhost:3000,http://127.0.0.1:3000",
@@ -147,7 +144,6 @@ CSRF_TRUSTED_ORIGINS = config(
 ).split(",")
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in CSRF_TRUSTED_ORIGINS if o.strip()]
 
-# ✅ FIX PRODUCCIÓN: agregar dominios reales si no vienen en ENV
 if IS_PRODUCTION:
     prod_frontends = [
         "https://smartcollectornahuala.com",
@@ -159,12 +155,10 @@ if IS_PRODUCTION:
         if origin not in CSRF_TRUSTED_ORIGINS:
             CSRF_TRUSTED_ORIGINS.append(origin)
 
-    # Para evitar problemas con CSRF/HTTPS en algunas rutas
     api_origin = "https://api.smartcollectornahuala.com"
     if api_origin not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(api_origin)
 
-# Headers permitidos (incluye Authorization para JWT)
 CORS_ALLOW_HEADERS = [
     "accept",
     "accept-encoding",
@@ -178,12 +172,11 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # ======================================================
-# ✅ 1.4 STATIC FILES (WhiteNoise)
+# STATIC FILES (WhiteNoise)
 # ======================================================
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Evita warning si la carpeta no existe en algún entorno
 _static_dir = BASE_DIR / "static"
 if _static_dir.exists():
     STATICFILES_DIRS = [_static_dir]
@@ -226,7 +219,7 @@ SIMPLE_JWT = {
 AUTH_USER_MODEL = "core.User"
 
 # ======================================================
-# GOOGLE LOGIN (DESACTIVADO EN LOCAL)
+# GOOGLE LOGIN
 # ======================================================
 GOOGLE_CLIENT_ID = ""
 
@@ -236,7 +229,27 @@ GOOGLE_CLIENT_ID = ""
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ======================================================
-# EMAIL (LOCAL - DESARROLLO)
+# ✅ EMAIL (LOCAL vs PRODUCCIÓN)
+# - Local (DEBUG=True): imprime en consola (no envía)
+# - Producción (DEBUG=False): envía por SMTP (Gmail/SendGrid)
 # ======================================================
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-DEFAULT_FROM_EMAIL = "no-reply@smartcollector.local"
+if DEBUG:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    DEFAULT_FROM_EMAIL = "no-reply@smartcollector.local"
+else:
+    EMAIL_BACKEND = config(
+        "EMAIL_BACKEND",
+        default="django.core.mail.backends.smtp.EmailBackend"
+    )
+
+    EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
+    EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+    EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+
+    EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+    EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+
+    DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER or "no-reply@smartcollectornahuala.com")
+
+    # Opcional: timeout para evitar cuelgues
+    EMAIL_TIMEOUT = config("EMAIL_TIMEOUT", default=20, cast=int)
