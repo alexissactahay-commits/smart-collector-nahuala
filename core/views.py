@@ -165,7 +165,7 @@ def forgot_password_view(request):
     token = default_token_generator.make_token(user)
 
     host = request.get_host()
-    base_url = "https://smartcollectorolintepeque.com" if "localhost" not in host else "http://localhost:3000"
+    base_url = "https://smartcollectornahuala.com" if "localhost" not in host else "http://localhost:3000"
 
     reset_url = f"{base_url}/reset-password/{uidb64}/{token}/"
 
