@@ -1,100 +1,195 @@
+/* AdminRouteCommunities.css */
+
+/* =========================
+   Layout general
+========================= */
 .arc-container {
-  padding: 18px;
+  padding: 14px;
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
+/* Card más compacta */
 .arc-card {
   background: #fff;
-  border: 1px solid #e6e6e6;
-  border-radius: 10px;
-  padding: 14px;
-  margin-top: 12px;
+  border: 1px solid #e9e9e9;
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
+/* Títulos/labels (si los usas) */
+.arc-card h2,
+.arc-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+/* =========================
+   Row / Inputs
+========================= */
 .arc-row {
   display: flex;
   gap: 10px;
   margin-top: 8px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
+/* Inputs y select más pequeños */
 .arc-input {
   flex: 1;
-  padding: 10px;
-  border: 1px solid #d8d8d8;
-  border-radius: 8px;
+  min-width: 220px;
+  padding: 8px 10px;
+  border: 1px solid #dedede;
+  border-radius: 10px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .arc-select {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #d8d8d8;
-  border-radius: 8px;
+  padding: 8px 10px;
+  border: 1px solid #dedede;
+  border-radius: 10px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.arc-input:focus,
+.arc-select:focus {
+  border-color: #b9cdfc;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+/* =========================
+   Botones compactos
+========================= */
 .arc-btn {
-  padding: 10px 12px;
-  border: none;
-  border-radius: 8px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
   cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
+  transition: transform 0.06s ease, background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.arc-btn:hover {
+  transform: translateY(-1px);
 }
 
 .arc-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
+  transform: none;
 }
 
+/* Variantes más pro */
 .arc-btn.secondary {
-  background: #e9eefc;
+  background: #eef4ff;
+  border-color: #dbe7ff;
+  color: #1d4ed8;
 }
 
 .arc-btn.danger {
-  background: #ffe3e3;
+  background: #fff1f2;
+  border-color: #ffd0d6;
+  color: #b91c1c;
 }
 
+/* Botón principal (si lo usas sin clase) */
+.arc-btn:not(.secondary):not(.danger) {
+  background: #143c7d;
+  color: #fff;
+}
+
+/* =========================
+   Lista compacta tipo tabla
+========================= */
 .arc-list {
   list-style: none;
   padding: 0;
   margin: 10px 0 0;
 }
 
+/* Item más delgado */
 .arc-list-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: 10px;
-  padding: 10px;
+  align-items: center;
+  padding: 10px 12px;
   border: 1px solid #f0f0f0;
-  border-radius: 10px;
+  border-radius: 12px;
   margin-bottom: 8px;
+  background: #fafafa;
 }
 
+/* Nombre comunidad */
+.arc-list-item .arc-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Acciones más pequeñas, en una fila */
 .arc-actions {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
 }
 
+/* Si se hace muy angosto, que bajen */
+@media (max-width: 720px) {
+  .arc-list-item {
+    grid-template-columns: 1fr;
+  }
+  .arc-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
+
+/* =========================
+   Texto y alertas
+========================= */
 .arc-muted {
-  color: #777;
+  color: #6b7280;
   margin-top: 8px;
+  font-size: 12.5px;
 }
 
+/* Alertas más compactas */
 .arc-alert {
-  padding: 10px;
-  border-radius: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
   margin-top: 10px;
+  font-size: 13px;
 }
 
 .arc-alert.success {
-  background: #e7ffe7;
-  border: 1px solid #b6f0b6;
+  background: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  color: #065f46;
 }
 
 .arc-alert.error {
-  background: #ffeaea;
-  border: 1px solid #ffbdbd;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #991b1b;
 }
 
 .arc-alert.info {
-  background: #eef6ff;
-  border: 1px solid #cfe4ff;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
 }
