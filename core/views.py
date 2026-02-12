@@ -307,7 +307,6 @@ def admin_report_detail_view(request, pk):
 def admin_routes_view(request):
 
     if request.method == "GET":
-        # ⚠️ No depender de day_of_week, pero lo dejamos por compatibilidad
         routes = Route.objects.prefetch_related("points").order_by("id")
         serializer = RouteSerializer(routes, many=True)
         return Response(serializer.data)
@@ -406,6 +405,19 @@ def admin_route_dates_view(request):
         )
 
         return Response(RouteDateSerializer(nueva_fecha).data, status=201)
+
+
+# ✅✅✅ NUEVO: DELETE FECHAS (para que no dé 404 al eliminar)
+@api_view(["DELETE"])
+@permission_classes([IsAdminUser])
+def admin_route_date_delete_view(request, pk):
+    try:
+        fecha = RouteDate.objects.get(pk=pk)
+    except RouteDate.DoesNotExist:
+        return Response({"error": "Fecha no encontrada"}, status=404)
+
+    fecha.delete()
+    return Response({"message": "Fecha eliminada correctamente"}, status=200)
 
 
 # =====================================================
@@ -651,6 +663,7 @@ def my_reports_view(request):
         serializer = ReportSerializer(report)
         return Response(serializer.data, status=201)
 
+
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def my_report_delete_view(request, pk):
@@ -664,17 +677,16 @@ def my_report_delete_view(request, pk):
     except Report.DoesNotExist:
         return Response({"error": "Reporte no encontrado."}, status=404)
 
-    # ✅ Admin puede borrar cualquiera
     if request.user.role == "admin":
         report.delete()
         return Response({"message": "Reporte eliminado por admin."}, status=200)
 
-    # ✅ Ciudadano solo puede borrar los suyos
     if report.user_id != request.user.id:
         return Response({"error": "No tienes permisos para eliminar este reporte."}, status=403)
 
     report.delete()
     return Response({"message": "Reporte eliminado correctamente."}, status=200)
+
 
 # ====================================
 #   OTROS
@@ -740,7 +752,6 @@ def upload_profile_picture(request):
 def my_notifications_view(request):
     user = request.user
 
-    # ✅✅✅ FILTRO: no mostrar borrados globales ni borrados por el mismo usuario
     mensajes = (
         Notification.objects
         .filter(
@@ -770,7 +781,6 @@ def my_notifications_view(request):
     return Response(data, status=200)
 
 
-# ✅✅✅ NUEVO: CIUDADANO BORRA MENSAJE (solo para sí mismo)
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def my_notification_delete_view(request, pk):
@@ -778,11 +788,9 @@ def my_notification_delete_view(request, pk):
 
     n = get_object_or_404(Notification, pk=pk, usuario=user)
 
-    # Si ya lo borró el admin globalmente, respondemos ok igual
     if getattr(n, "deleted_globally", False):
         return Response({"message": "El mensaje ya fue eliminado por administración."}, status=200)
 
-    # Marcar borrado por el usuario
     n.deleted_by_user = True
     if not n.deleted_at:
         n.deleted_at = timezone.now()
@@ -866,7 +874,6 @@ def send_message_view(request):
         except ValueError:
             limit = 50
 
-        # ✅✅✅ FILTRO: no mostrar borrados globales
         mensajes = (
             Notification.objects
             .select_related("usuario", "sender")
@@ -886,18 +893,12 @@ def send_message_view(request):
 
             data.append({
                 "id": m.id,
-
-                # compatibilidad
                 "user_id": m.usuario.id if m.usuario else None,
                 "username": m.usuario.username if m.usuario else None,
-
-                # ✅ recomendado para tu frontend: msg.usuario?.username
                 "usuario": usuario_obj,
-
                 "message": m.message,
                 "estado": m.estado,
                 "created_at": m.created_at,
-
                 "sender": {
                     "id": m.sender.id,
                     "username": m.sender.username,
@@ -917,7 +918,6 @@ def send_message_view(request):
     if not message:
         return Response({"error": "message no puede ir vacío."}, status=400)
 
-    # ✅ guardamos sender para auditoría
     sender_user = request.user
 
     if user_id in [None, "", "all", "ALL", "todos", "TODOS"]:
@@ -953,13 +953,11 @@ def send_message_view(request):
     return Response({"message": "Mensaje enviado correctamente."}, status=201)
 
 
-# ✅✅✅ NUEVO: ADMIN BORRA MENSAJE (GLOBAL)
 @api_view(["DELETE"])
 @permission_classes([IsAdminUser])
 def admin_message_delete_view(request, pk):
     n = get_object_or_404(Notification, pk=pk)
 
-    # Marcar borrado global
     n.deleted_globally = True
     if not n.deleted_at:
         n.deleted_at = timezone.now()
