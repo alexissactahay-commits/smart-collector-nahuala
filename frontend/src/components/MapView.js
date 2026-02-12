@@ -1,10 +1,11 @@
+// MapsView.js
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import axios from "axios";
 import "react-toastify/dist/ReactToastify.css";
 
 const normalizeApiBase = () => {
   let base = process.env.REACT_APP_API_URL || "http://localhost:8000";
-  base = base.replace(/\/+$/, "");
+  base = String(base).replace(/\/+$/, "");
   if (!base.endsWith("/api")) base = `${base}/api`;
   return base;
 };
@@ -12,8 +13,27 @@ const normalizeApiBase = () => {
 const API = normalizeApiBase();
 
 const buildURL = (endpoint) => {
-  if (!endpoint.startsWith("/")) endpoint = "/" + endpoint;
-  return API + endpoint;
+  let ep = String(endpoint || "");
+  if (!ep.startsWith("/")) ep = "/" + ep;
+  return API + ep;
+};
+
+// ✅ token robusto (por si guardas token o access)
+const getToken = () => {
+  return (
+    localStorage.getItem("token") ||
+    localStorage.getItem("access") ||
+    ""
+  );
+};
+
+const handleAuthFail = () => {
+  // limpia todo lo de auth
+  localStorage.removeItem("token");
+  localStorage.removeItem("access");
+  localStorage.removeItem("refresh");
+  localStorage.removeItem("userRole");
+  window.location.replace("/login");
 };
 
 const useGoogleMaps = (apiKey) => {
@@ -31,20 +51,32 @@ const useGoogleMaps = (apiKey) => {
       return;
     }
 
-    let script = document.getElementById("google-maps-script");
+    const scriptId = "google-maps-script";
+    let script = document.getElementById(scriptId);
+
+    const onLoad = () => setMapLoaded(true);
+    const onError = () => setError("Error al cargar Google Maps API");
+
     if (!script) {
       script = document.createElement("script");
-      script.id = "google-maps-script";
+      script.id = scriptId;
       script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=geometry`;
       script.async = true;
       script.defer = true;
-      script.onload = () => setMapLoaded(true);
-      script.onerror = () => setError("Error al cargar Google Maps API");
+      script.addEventListener("load", onLoad);
+      script.addEventListener("error", onError);
       document.head.appendChild(script);
     } else {
-      script.addEventListener("load", () => setMapLoaded(true));
-      script.addEventListener("error", () => setError("Error al cargar Google Maps API"));
+      script.addEventListener("load", onLoad);
+      script.addEventListener("error", onError);
     }
+
+    return () => {
+      try {
+        script?.removeEventListener("load", onLoad);
+        script?.removeEventListener("error", onError);
+      } catch (_) {}
+    };
   }, [apiKey]);
 
   return { mapLoaded, error };
@@ -68,7 +100,7 @@ const MapView = () => {
 
   const { mapLoaded, error } = useGoogleMaps(process.env.REACT_APP_GOOGLE_MAPS_API_KEY);
 
-  const token = localStorage.getItem("token");
+  const token = getToken();
   const userRole = localStorage.getItem("userRole");
 
   const todayISO = () => {
@@ -79,7 +111,7 @@ const MapView = () => {
     return `${y}-${m}-${day}`;
   };
 
-  // ====== Opciones de fechas disponibles (programadas por admin) ======
+  // ====== Opciones de fechas disponibles ======
   const availableDates = useMemo(() => {
     const arr = Array.isArray(calendarDates) ? calendarDates : [];
     const only = arr.map((x) => x?.date).filter(Boolean);
@@ -88,10 +120,8 @@ const MapView = () => {
     return unique;
   }, [calendarDates]);
 
-  // ====== Fecha seleccionada por el usuario ======
   const [selectedDate, setSelectedDate] = useState("");
 
-  // setear por defecto: hoy si existe, si no la próxima, si no vacío
   useEffect(() => {
     if (!availableDates.length) {
       setSelectedDate("");
@@ -110,45 +140,34 @@ const MapView = () => {
   // ====== IDs de rutas programadas para la fecha seleccionada ======
   const scheduledRouteIds = useMemo(() => {
     if (!selectedDate) return [];
-    return calendarDates
+    return (Array.isArray(calendarDates) ? calendarDates : [])
       .filter((x) => x?.date === selectedDate)
       .map((x) => x?.route?.id)
       .filter(Boolean);
   }, [calendarDates, selectedDate]);
 
-  // ====== Horarios disponibles para esa fecha (según day_of_week de la ruta) ======
+  // ====== Horarios disponibles para esa fecha ======
+  // ✅ FIX: tu RouteSchedule normalmente NO trae day_of_week, así que solo filtramos por route.id
   const availableSchedulesForSelectedDate = useMemo(() => {
     if (!selectedDate || !scheduledRouteIds.length) return [];
 
-    // rutas del día seleccionado (por fecha)
-    const routesOfDate = routesWithPoints.filter((r) => scheduledRouteIds.includes(r.id));
-    if (!routesOfDate.length) return [];
-
-    // day_of_week permitido (pueden ser varias rutas en un día)
-    const allowedDays = new Set(routesOfDate.map((r) => r.day_of_week).filter(Boolean));
-
     const schedules = (Array.isArray(routeSchedules) ? routeSchedules : [])
-      .filter((s) => s?.route?.id && allowedDays.has(s.day_of_week))
-      .filter((s) => scheduledRouteIds.includes(s.route.id))
+      .filter((s) => s?.route?.id && scheduledRouteIds.includes(s.route.id))
       .map((s) => ({
         id: s.id,
         route_id: s.route.id,
         route_name: s.route.name,
-        day_of_week: s.day_of_week,
         start_time: s.start_time,
         end_time: s.end_time,
         label: `${s.route.name || "Ruta"} — ${s.start_time || "--:--"} a ${s.end_time || "--:--"}`,
       }));
 
-    // ordenar por hora inicio
     schedules.sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
     return schedules;
-  }, [selectedDate, scheduledRouteIds, routesWithPoints, routeSchedules]);
+  }, [selectedDate, scheduledRouteIds, routeSchedules]);
 
-  // ====== Horario seleccionado por el usuario ======
   const [selectedScheduleId, setSelectedScheduleId] = useState("");
 
-  // si cambia fecha, escoger el primer horario disponible
   useEffect(() => {
     if (!availableSchedulesForSelectedDate.length) {
       setSelectedScheduleId("");
@@ -159,7 +178,11 @@ const MapView = () => {
 
   const selectedSchedule = useMemo(() => {
     if (!selectedScheduleId) return null;
-    return availableSchedulesForSelectedDate.find((s) => String(s.id) === String(selectedScheduleId)) || null;
+    return (
+      availableSchedulesForSelectedDate.find(
+        (s) => String(s.id) === String(selectedScheduleId)
+      ) || null
+    );
   }, [availableSchedulesForSelectedDate, selectedScheduleId]);
 
   const selectedRoute = useMemo(() => {
@@ -191,25 +214,31 @@ const MapView = () => {
     const loadData = async () => {
       try {
         if (!token) {
-          window.location.href = "/login";
+          handleAuthFail();
           return;
         }
 
         const headers = { Authorization: `Bearer ${token}` };
 
-        // fechas asignadas
+        // ✅ fechas asignadas
         const calRes = await axios.get(buildURL("/my-routes/"), { headers });
         setCalendarDates(Array.isArray(calRes.data) ? calRes.data : []);
 
-        // rutas con puntos (tu endpoint actual)
+        // ✅ rutas con puntos
         const routesRes = await axios.get(buildURL("/routes/"), { headers });
         setRoutesWithPoints(Array.isArray(routesRes.data) ? routesRes.data : []);
 
-        // ✅ horarios (nuevo endpoint ciudadano)
+        // ✅ horarios ciudadano
         const schRes = await axios.get(buildURL("/citizen/route-schedules/"), { headers });
         setRouteSchedules(Array.isArray(schRes.data) ? schRes.data : []);
       } catch (err) {
-        console.error("Error cargando datos de mapa:", err);
+        const status = err?.response?.status;
+        console.error("Error cargando datos de mapa:", err?.response?.data || err.message);
+
+        if (status === 401 || status === 403) {
+          handleAuthFail();
+          return;
+        }
       }
     };
 
@@ -222,7 +251,6 @@ const MapView = () => {
   useEffect(() => {
     if (!map || !mapLoaded) return;
 
-    // limpiar polylines anteriores
     polylines.forEach((p) => p.setMap(null));
     routeMarkers.forEach((m) => m.setMap(null));
 
@@ -289,10 +317,7 @@ const MapView = () => {
 
   const showNoRouteToday = useMemo(() => {
     const today = todayISO();
-    // solo mostrar el mensaje “para hoy”
     if (selectedDate !== today) return false;
-
-    // si hoy no hay rutas programadas
     return !scheduledRouteIds.length;
   }, [scheduledRouteIds, selectedDate]);
 
@@ -310,14 +335,12 @@ const MapView = () => {
           </span>
         )}
 
-        {/* Mensaje si HOY no hay ruta */}
         {showNoRouteToday && (
           <div style={{ marginTop: 6, color: "#b00020", fontWeight: 600 }}>
             No hay ruta definida para hoy.
           </div>
         )}
 
-        {/* Selectores */}
         <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
           <div>
             <label style={{ fontSize: 12, color: "#444" }}>Día:</label>
