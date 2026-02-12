@@ -18,80 +18,83 @@ body {
 
 /* ================================
    CONTENEDOR PRINCIPAL
+   ✅ Reservamos espacio para que el logo + badge no tapen contenido
    ================================ */
 #root {
   position: relative;
   min-height: 100%;
+
+  /* ✅ clave: deja espacio al final para que no se tape la última parte */
+  padding-bottom: clamp(110px, 14vw, 180px);
 }
 
 /* ================================
    LOGO INSTITUCIONAL FIJO (ESQUINA)
-   RESPONSIVE FLUIDO (se reduce en móvil)
+   ✅ Más pequeño y menos invasivo
    ================================ */
 .app-watermark {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  bottom: 14px;
+  right: 14px;
 
-  /* 👇 Tamaño fluido: móvil pequeño -> desktop grande */
-  width: clamp(110px, 18vw, 220px);
-  height: clamp(110px, 18vw, 220px);
+  /* ✅ Más compacto */
+  width: clamp(85px, 14vw, 170px);
+  height: clamp(85px, 14vw, 170px);
 
   background-image: url("./assets/logo-nahuala.PNG");
   background-repeat: no-repeat;
   background-size: contain;
   background-position: center;
 
-  opacity: 0.35;        /* elegante, no molesta */
+  opacity: 0.26;        /* ✅ más sutil */
   pointer-events: none; /* no bloquea clics */
-  z-index: 10;
+
+  /* ✅ más bajo para que no tape tanto */
+  z-index: 6;
 }
 
 /* ================================
    PLACA INSTITUCIONAL
-   TEXTO ADMINISTRACIÓN
-   RESPONSIVE FLUIDO (se reduce en móvil)
+   ✅ Más pequeña y con mejor espacio
    ================================ */
 .app-footer-badge {
   position: fixed;
-  bottom: 24px;
-  left: 24px;
+  bottom: 14px;
+  left: 14px;
 
-  /* 👇 padding fluido */
-  padding: clamp(6px, 1.2vw, 10px) clamp(10px, 2vw, 16px);
-  border-radius: clamp(10px, 2vw, 14px);
+  /* ✅ compacto */
+  padding: clamp(5px, 0.9vw, 8px) clamp(9px, 1.6vw, 13px);
+  border-radius: clamp(9px, 1.6vw, 12px);
 
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 
   border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
 
   display: flex;
   align-items: center;
-  gap: clamp(6px, 1vw, 10px);
+  gap: clamp(6px, 1vw, 9px);
 
-  /* 👇 Fuente fluida */
-  font-size: clamp(10px, 1.4vw, 12px);
+  font-size: clamp(9px, 1.1vw, 11px);
   font-weight: 600;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.35px;
   color: rgba(0, 0, 0, 0.75);
 
-  /* Para que no se salga en pantallas muy pequeñas */
   max-width: 78vw;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 
   pointer-events: none;
-  z-index: 11;
+  z-index: 7;
 }
 
-/* Punto institucional (también responsive) */
+/* Punto institucional */
 .app-footer-dot {
-  width: clamp(7px, 1.2vw, 10px);
-  height: clamp(7px, 1.2vw, 10px);
+  width: clamp(6px, 1vw, 9px);
+  height: clamp(6px, 1vw, 9px);
   border-radius: 50%;
   background: rgba(0, 123, 255, 0.85);
   flex: 0 0 auto;
@@ -107,16 +110,22 @@ body {
    AJUSTES EXTRA PARA MÓVIL
    ================================ */
 @media (max-width: 480px) {
+  #root {
+    /* ✅ un poco más para móviles */
+    padding-bottom: 150px;
+  }
+
   .app-watermark {
     bottom: 10px;
     right: 10px;
-    opacity: 0.30; /* un poquito más sutil en móvil */
+    opacity: 0.22;
   }
 
   .app-footer-badge {
     bottom: 10px;
     left: 10px;
-    max-width: 84vw;
+    max-width: 86vw;
+    font-size: 9px;
   }
 }
 
