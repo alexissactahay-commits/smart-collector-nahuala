@@ -15,7 +15,9 @@ const loadGoogleMapsScript = (apiKey) => {
     const existing = document.getElementById("google-maps-script");
     if (existing) {
       existing.addEventListener("load", () => resolve(true));
-      existing.addEventListener("error", () => reject(new Error("Error cargando Google Maps")));
+      existing.addEventListener("error", () =>
+        reject(new Error("Error cargando Google Maps"))
+      );
       return;
     }
 
@@ -82,7 +84,7 @@ const CollectionPoints = () => {
   // 🔥 modo edición
   const [editingId, setEditingId] = useState(null);
 
-  // Formulario (ruta ya NO depende del día/horario aquí)
+  // Formulario
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -90,7 +92,6 @@ const CollectionPoints = () => {
 
   // Puntos dibujados en el mapa
   const [drawPoints, setDrawPoints] = useState([]); // [{lat, lng}]
-  const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState("");
 
   // ================================
@@ -101,25 +102,16 @@ const CollectionPoints = () => {
   const polylineRef = useRef(null); // google polyline
   const markersRef = useRef([]); // markers for points
   const clickListenerRef = useRef(null);
+  const initTimerRef = useRef(null);
 
   const defaultCenter = useMemo(() => {
-    // Centro aproximado (puedes ajustar a Nahualá)
+    // Centro aproximado (ajusta si quieres)
     return { lat: 14.84, lng: -91.32 };
   }, []);
 
-  const onChange = (e) => setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  const onChange = (e) =>
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
-  const resetForm = () => {
-    setForm({ name: "", description: "" });
-    setEditingId(null);
-    setDrawPoints([]);
-    // limpiar visual
-    clearMapDrawing();
-  };
-
-  // ================================
-  // Helpers: map drawing
-  // ================================
   const clearMapDrawing = () => {
     if (markersRef.current?.length) {
       markersRef.current.forEach((m) => m.setMap(null));
@@ -135,10 +127,8 @@ const CollectionPoints = () => {
     if (!gmapRef.current || !(window.google && window.google.maps)) return;
 
     clearMapDrawing();
-
     if (!pts || pts.length === 0) return;
 
-    // markers
     markersRef.current = pts.map((p, idx) => {
       return new window.google.maps.Marker({
         position: p,
@@ -147,7 +137,6 @@ const CollectionPoints = () => {
       });
     });
 
-    // polyline
     polylineRef.current = new window.google.maps.Polyline({
       path: pts,
       geodesic: true,
@@ -157,10 +146,16 @@ const CollectionPoints = () => {
     });
     polylineRef.current.setMap(gmapRef.current);
 
-    // fit bounds
     const bounds = new window.google.maps.LatLngBounds();
     pts.forEach((p) => bounds.extend(p));
     gmapRef.current.fitBounds(bounds);
+  };
+
+  const resetForm = () => {
+    setForm({ name: "", description: "" });
+    setEditingId(null);
+    setDrawPoints([]);
+    clearMapDrawing();
   };
 
   const undoLastPoint = () => {
@@ -177,48 +172,68 @@ const CollectionPoints = () => {
   };
 
   // ================================
-  // Init Google Map
+  // Init Google Map (FIX: asegura que el div exista)
   // ================================
   useEffect(() => {
     let mounted = true;
+
+    const tryInitMap = () => {
+      if (!mounted) return;
+
+      // si el div aún no existe, reintenta
+      if (!mapRef.current) {
+        initTimerRef.current = setTimeout(tryInitMap, 200);
+        return;
+      }
+
+      // si ya existe el mapa, no lo recrees
+      if (gmapRef.current) return;
+
+      const map = new window.google.maps.Map(mapRef.current, {
+        center: defaultCenter,
+        zoom: 14,
+        mapTypeId: "roadmap",
+      });
+
+      gmapRef.current = map;
+
+      // Click to add point
+      const listener = map.addListener("click", (e) => {
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
+
+        setDrawPoints((prev) => {
+          const next = [...prev, { lat, lng }];
+          renderDrawingOnMap(next);
+          return next;
+        });
+      });
+
+      clickListenerRef.current = listener;
+
+      // si ya hay puntos en estado
+      if (drawPoints.length > 0) renderDrawingOnMap(drawPoints);
+
+      // por si el contenedor se dibujó después, forzamos resize
+      setTimeout(() => {
+        if (gmapRef.current) {
+          window.google.maps.event.trigger(gmapRef.current, "resize");
+          gmapRef.current.setCenter(defaultCenter);
+        }
+      }, 200);
+    };
 
     const init = async () => {
       try {
         await loadGoogleMapsScript(GOOGLE_KEY);
         if (!mounted) return;
 
-        setMapReady(true);
-
-        if (!mapRef.current) return;
-
-        const map = new window.google.maps.Map(mapRef.current, {
-          center: defaultCenter,
-          zoom: 14,
-          mapTypeId: "roadmap",
-        });
-
-        gmapRef.current = map;
-
-        // Click to add point
-        const listener = map.addListener("click", (e) => {
-          const lat = e.latLng.lat();
-          const lng = e.latLng.lng();
-
-          setDrawPoints((prev) => {
-            const next = [...prev, { lat, lng }];
-            renderDrawingOnMap(next);
-            return next;
-          });
-        });
-
-        clickListenerRef.current = listener;
-
-        // si ya hay puntos en estado
-        if (drawPoints.length > 0) renderDrawingOnMap(drawPoints);
+        // ya que el script cargó, intenta crear el mapa
+        tryInitMap();
       } catch (e) {
         console.error(e);
         setMapError(
-          "No se pudo cargar Google Maps. Verifica tu API KEY y que esté habilitado Billing en Google Cloud."
+          "No se pudo cargar Google Maps. Verifica tu API KEY, referers y que Billing esté activo en Google Cloud."
         );
       }
     };
@@ -227,6 +242,9 @@ const CollectionPoints = () => {
 
     return () => {
       mounted = false;
+      try {
+        if (initTimerRef.current) clearTimeout(initTimerRef.current);
+      } catch (_) {}
       try {
         if (clickListenerRef.current) clickListenerRef.current.remove();
       } catch (_) {}
@@ -262,16 +280,12 @@ const CollectionPoints = () => {
   // BUILD PAYLOAD
   // ================================
   const buildPayload = () => {
-    // ✅ Convertimos drawPoints a points[] con order
     const points = drawPoints.map((p, idx) => ({
       latitude: Number(p.lat),
       longitude: Number(p.lng),
       order: idx,
     }));
 
-    // ⚠️ Para NO romper tu backend actual:
-    // - En tu RouteSerializer están day_of_week, start_time, end_time.
-    // - Aquí ponemos valores por defecto (luego el horario real se manejará en módulo 3).
     return {
       name: form.name.trim(),
       description: (form.description || "").trim(),
@@ -287,7 +301,8 @@ const CollectionPoints = () => {
 
   const validateForm = () => {
     if (!form.name.trim()) return "Ingresa el nombre de la ruta.";
-    if (drawPoints.length < 2) return "Dibuja la ruta: mínimo 2 puntos (inicio y fin).";
+    if (drawPoints.length < 2)
+      return "Dibuja la ruta: mínimo 2 puntos (inicio y fin).";
     return null;
   };
 
@@ -334,7 +349,6 @@ const CollectionPoints = () => {
 
     const payload = buildPayload();
 
-    // ✅ intentamos con slash y sin slash
     const urlWithSlash = `${API_URL}/admin/routes/${editingId}/`;
     const urlNoSlash = `${API_URL}/admin/routes/${editingId}`;
 
@@ -379,7 +393,6 @@ const CollectionPoints = () => {
       description: route.description || "",
     });
 
-    // Cargar puntos existentes
     const pts = Array.isArray(route.points) ? [...route.points] : [];
     pts.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
@@ -397,7 +410,9 @@ const CollectionPoints = () => {
     const { token, authHeaders } = getAuthHeaders();
     if (!token) return handle401();
 
-    const ok = window.confirm("¿Seguro que deseas ELIMINAR esta ruta? Esta acción no se puede deshacer.");
+    const ok = window.confirm(
+      "¿Seguro que deseas ELIMINAR esta ruta? Esta acción no se puede deshacer."
+    );
     if (!ok) return;
 
     const urlWithSlash = `${API_URL}/admin/routes/${routeId}/`;
@@ -426,13 +441,17 @@ const CollectionPoints = () => {
   };
 
   // ================================
-  // UI
+  // UI (FIX: NO retornar temprano, para que el mapa exista)
   // ================================
-  if (loading) return <div className="collection-points-container">Cargando rutas...</div>;
-
   return (
     <div className="collection-points-container">
       <h1>Puntos de Recolección - Smart Collector</h1>
+
+      {loading && (
+        <div style={{ marginBottom: 10, color: "#666" }}>
+          Cargando rutas...
+        </div>
+      )}
 
       <div className="existing-routes">
         <h2>Registrar Ruta (Dibujada en Mapa)</h2>
@@ -457,7 +476,15 @@ const CollectionPoints = () => {
 
           {/* MAPA DIBUJO */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+                alignItems: "center",
+                marginBottom: 8,
+              }}
+            >
               <strong>Dibuja la ruta:</strong>
               <span style={{ color: "#666" }}>
                 (clic en el mapa para agregar puntos — mínimo 2)
@@ -477,13 +504,28 @@ const CollectionPoints = () => {
             </div>
 
             {!GOOGLE_KEY && (
-              <div style={{ padding: 10, border: "1px solid #f5c2c7", background: "#f8d7da", color: "#842029" }}>
-                Falta <strong>REACT_APP_GOOGLE_MAPS_API_KEY</strong> en tu .env. Sin eso no se puede dibujar en el mapa.
+              <div
+                style={{
+                  padding: 10,
+                  border: "1px solid #f5c2c7",
+                  background: "#f8d7da",
+                  color: "#842029",
+                }}
+              >
+                Falta <strong>REACT_APP_GOOGLE_MAPS_API_KEY</strong> en tu .env.
+                Sin eso no se puede dibujar en el mapa.
               </div>
             )}
 
             {mapError && (
-              <div style={{ padding: 10, border: "1px solid #ffeeba", background: "#fff3cd", color: "#856404" }}>
+              <div
+                style={{
+                  padding: 10,
+                  border: "1px solid #ffeeba",
+                  background: "#fff3cd",
+                  color: "#856404",
+                }}
+              >
                 {mapError}
               </div>
             )}
