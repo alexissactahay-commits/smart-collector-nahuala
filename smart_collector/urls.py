@@ -10,6 +10,7 @@ from core.views import (
     register_view,
     change_password,
     forgot_password_view,
+    reset_password_view,   # ✅✅✅ NUEVO: confirmar cambio de contraseña
     google_login,
 
     # ✅✅✅ HEALTH (DRF) - NUEVO
@@ -95,6 +96,7 @@ urlpatterns = [
     path("api/register/", register_view),
     path("api/change-password/", change_password),
     path("api/forgot-password/", forgot_password_view),
+    path("api/reset-password/", reset_password_view),  # ✅✅✅ NUEVO
     path("api/google-login/", google_login),
 
     # ======================

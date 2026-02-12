@@ -21,6 +21,7 @@ import AddDate from './components/AddDate';
 import AddSchedule from './components/AddSchedule';
 import GenerateReports from './components/GenerateReports';
 import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword'; // ✅✅✅ NUEVO: pantalla para cambiar contraseña
 
 // 🔥 Nuevos imports para recolector
 import RecolectorDashboard from './components/RecolectorDashboard';
@@ -52,6 +53,9 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+
+          {/* ✅✅✅ NUEVO: Reset de contraseña (PÚBLICO) */}
+          <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
 
           {/* Ruta Protegida: Admin Dashboard */}
           <Route

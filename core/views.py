@@ -9,7 +9,7 @@ from django.http import JsonResponse, HttpResponse
 from django.core.mail import EmailMultiAlternatives
 from django.utils.html import strip_tags
 
-from django.utils.http import urlsafe_base64_encode
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
 from django.template.loader import render_to_string
@@ -208,6 +208,49 @@ def forgot_password_view(request):
         logger.exception("ERROR enviando correo de reset: %s", repr(e))
         # ✅ no tiramos 500 al frontend
         return Response({"message": "Si el correo existe, recibirás instrucciones."}, status=200)
+
+
+# ✅✅✅ ENDPOINT FINAL: CAMBIAR CONTRASEÑA CON UID/TOKEN (PARA ResetPassword.js)
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def reset_password_view(request):
+    """
+    Espera:
+    - uidb64 (o uid)
+    - token
+    - new_password (o password)
+    - confirm_password (opcional)
+    """
+    uidb64 = request.data.get("uidb64") or request.data.get("uid")
+    token = request.data.get("token")
+    new_password = request.data.get("new_password") or request.data.get("password")
+    confirm_password = request.data.get("confirm_password")
+
+    if not uidb64 or not token or not new_password:
+        return Response({"error": "uid/token/new_password son obligatorios."}, status=400)
+
+    if confirm_password is not None and str(new_password) != str(confirm_password):
+        return Response({"error": "Las contraseñas no coinciden."}, status=400)
+
+    # Decodificar UID
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = User.objects.get(pk=uid)
+    except Exception:
+        return Response({"error": "Enlace inválido o expirado."}, status=400)
+
+    # Validar token
+    if not default_token_generator.check_token(user, token):
+        return Response({"error": "Enlace inválido o expirado."}, status=400)
+
+    # Setear nueva contraseña
+    try:
+        user.set_password(new_password)
+        user.save(update_fields=["password"])
+        return Response({"message": "Contraseña restablecida correctamente."}, status=200)
+    except Exception as e:
+        logger.exception("ERROR reset_password_view: %s", repr(e))
+        return Response({"error": "No se pudo restablecer la contraseña."}, status=500)
 
 
 # ====================================
@@ -510,7 +553,7 @@ def admin_route_schedule_delete_view(request, pk):
     try:
         horario = RouteSchedule.objects.get(pk=pk)
     except RouteSchedule.DoesNotExist:
-        return Response({"error": "Horario no encontrado"}, status=404)
+        return Response({"error": "Horario no encontrado."}, status=404)
 
     horario.delete()
 
