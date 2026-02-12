@@ -20,15 +20,10 @@ const buildURL = (endpoint) => {
 
 // ✅ token robusto (por si guardas token o access)
 const getToken = () => {
-  return (
-    localStorage.getItem("token") ||
-    localStorage.getItem("access") ||
-    ""
-  );
+  return localStorage.getItem("token") || localStorage.getItem("access") || "";
 };
 
 const handleAuthFail = () => {
-  // limpia todo lo de auth
   localStorage.removeItem("token");
   localStorage.removeItem("access");
   localStorage.removeItem("refresh");
@@ -85,14 +80,12 @@ const useGoogleMaps = (apiKey) => {
 const MapView = () => {
   const mapRef = useRef(null);
 
-  const DEFAULT_CENTER = useMemo(
-    () => ({ lat: 14.886351, lng: -91.514472 }),
-    []
-  );
+  // ✅ CAMBIO 1: Centro por defecto en NAHUALÁ (ajusta si quieres)
+  const DEFAULT_CENTER = useMemo(() => ({ lat: 14.845, lng: -91.318 }), []);
 
-  const [calendarDates, setCalendarDates] = useState([]); // my-routes (RouteDate)
-  const [routesWithPoints, setRoutesWithPoints] = useState([]); // routes with points
-  const [routeSchedules, setRouteSchedules] = useState([]); // citizen route schedules
+  const [calendarDates, setCalendarDates] = useState([]); // RouteDate
+  const [routesWithPoints, setRoutesWithPoints] = useState([]); // routes con points
+  const [routeSchedules, setRouteSchedules] = useState([]); // horarios
 
   const [map, setMap] = useState(null);
   const [polylines, setPolylines] = useState([]);
@@ -109,6 +102,19 @@ const MapView = () => {
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
+  };
+
+  // ✅ CAMBIO 2: Mostrar día en el selector
+  const dayNameFromISO = (iso) => {
+    try {
+      if (!iso) return "";
+      const [y, m, d] = iso.split("-").map(Number);
+      const dt = new Date(y, (m - 1), d);
+      const days = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+      return days[dt.getDay()] || "";
+    } catch {
+      return "";
+    }
   };
 
   // ====== Opciones de fechas disponibles ======
@@ -147,7 +153,6 @@ const MapView = () => {
   }, [calendarDates, selectedDate]);
 
   // ====== Horarios disponibles para esa fecha ======
-  // ✅ FIX: tu RouteSchedule normalmente NO trae day_of_week, así que solo filtramos por route.id
   const availableSchedulesForSelectedDate = useMemo(() => {
     if (!selectedDate || !scheduledRouteIds.length) return [];
 
@@ -206,7 +211,7 @@ const MapView = () => {
   }, [mapLoaded, DEFAULT_CENTER]);
 
   // ----------------------------
-  // Load calendar + routes + schedules
+  // Load data
   // ----------------------------
   useEffect(() => {
     if (!mapLoaded) return;
@@ -220,15 +225,12 @@ const MapView = () => {
 
         const headers = { Authorization: `Bearer ${token}` };
 
-        // ✅ fechas asignadas
         const calRes = await axios.get(buildURL("/my-routes/"), { headers });
         setCalendarDates(Array.isArray(calRes.data) ? calRes.data : []);
 
-        // ✅ rutas con puntos
         const routesRes = await axios.get(buildURL("/routes/"), { headers });
         setRoutesWithPoints(Array.isArray(routesRes.data) ? routesRes.data : []);
 
-        // ✅ horarios ciudadano
         const schRes = await axios.get(buildURL("/citizen/route-schedules/"), { headers });
         setRouteSchedules(Array.isArray(schRes.data) ? schRes.data : []);
       } catch (err) {
@@ -237,7 +239,6 @@ const MapView = () => {
 
         if (status === 401 || status === 403) {
           handleAuthFail();
-          return;
         }
       }
     };
@@ -246,7 +247,7 @@ const MapView = () => {
   }, [mapLoaded, token]);
 
   // ----------------------------
-  // Draw polyline for selected route
+  // Draw route
   // ----------------------------
   useEffect(() => {
     if (!map || !mapLoaded) return;
@@ -254,7 +255,12 @@ const MapView = () => {
     polylines.forEach((p) => p.setMap(null));
     routeMarkers.forEach((m) => m.setMap(null));
 
+    // ✅ CAMBIO 1 (parte 2): si NO hay ruta seleccionada -> centrar en NAHUALÁ
     if (!selectedRoute) {
+      try {
+        map.setCenter(DEFAULT_CENTER);
+        map.setZoom(14);
+      } catch (_) {}
       setPolylines([]);
       setRouteMarkers([]);
       return;
@@ -262,6 +268,10 @@ const MapView = () => {
 
     const pts = Array.isArray(selectedRoute.points) ? [...selectedRoute.points] : [];
     if (pts.length < 2) {
+      try {
+        map.setCenter(DEFAULT_CENTER);
+        map.setZoom(14);
+      } catch (_) {}
       setPolylines([]);
       setRouteMarkers([]);
       return;
@@ -270,13 +280,14 @@ const MapView = () => {
     pts.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
     const path = pts
-      .map((p) => ({
-        lat: Number(p.latitude),
-        lng: Number(p.longitude),
-      }))
+      .map((p) => ({ lat: Number(p.latitude), lng: Number(p.longitude) }))
       .filter((p) => !Number.isNaN(p.lat) && !Number.isNaN(p.lng));
 
     if (path.length < 2) {
+      try {
+        map.setCenter(DEFAULT_CENTER);
+        map.setZoom(14);
+      } catch (_) {}
       setPolylines([]);
       setRouteMarkers([]);
       return;
@@ -313,7 +324,7 @@ const MapView = () => {
     setPolylines([polyline]);
     setRouteMarkers([startMarker, endMarker]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, mapLoaded, selectedRoute]);
+  }, [map, mapLoaded, selectedRoute, DEFAULT_CENTER]);
 
   const showNoRouteToday = useMemo(() => {
     const today = todayISO();
@@ -348,12 +359,20 @@ const MapView = () => {
             <select
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              style={{ padding: "6px 8px", minWidth: 220 }}
+              style={{ padding: "6px 8px", minWidth: 260 }}
             >
               <option value="">-- Seleccione un día --</option>
-              {availableDates.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
+
+              {/* ✅ CAMBIO 2: fecha + (día) */}
+              {availableDates.map((d) => {
+                const dayName = dayNameFromISO(d);
+                const label = dayName ? `${d} (${dayName})` : d;
+                return (
+                  <option key={d} value={d}>
+                    {label}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
@@ -370,7 +389,9 @@ const MapView = () => {
                 <option value="">-- No hay horarios para este día --</option>
               ) : (
                 availableSchedulesForSelectedDate.map((s) => (
-                  <option key={s.id} value={s.id}>{s.label}</option>
+                  <option key={s.id} value={s.id}>
+                    {s.label}
+                  </option>
                 ))
               )}
             </select>
