@@ -98,7 +98,7 @@ ROOT_URLCONF = "smart_collector.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],  # 👈 importante para password_reset_email.html
+        "DIRS": [BASE_DIR / "templates"],  # importante para password_reset_email.html
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -236,32 +236,57 @@ FRONTEND_BASE_URL = str(FRONTEND_BASE_URL).rstrip("/")
 
 # ======================================================
 # ✅ EMAIL (LOCAL vs PRODUCCIÓN)
-# - Local (DEBUG=True): imprime en consola (no envía)
-# - Producción (DEBUG=False): envía por SMTP (Gmail/SendGrid)
 # ======================================================
 if DEBUG:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
     DEFAULT_FROM_EMAIL = "no-reply@smartcollector.local"
 else:
-    EMAIL_BACKEND = config(
-        "EMAIL_BACKEND",
-        default="django.core.mail.backends.smtp.EmailBackend"
-    )
+    EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
 
     EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
     EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 
-    # ✅ TLS / SSL (dejamos ambos por compatibilidad)
+    # TLS / SSL (compatibilidad)
     EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
     EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=False, cast=bool)
+
+    # ✅ Evitar conflicto TLS/SSL
+    if EMAIL_USE_SSL:
+        EMAIL_USE_TLS = False
+        if EMAIL_PORT == 587:
+            EMAIL_PORT = 465
 
     EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
     EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 
+    # ✅ App password sin espacios (por si la pegaste con espacios)
+    EMAIL_HOST_PASSWORD = str(EMAIL_HOST_PASSWORD).replace(" ", "")
+
     DEFAULT_FROM_EMAIL = config(
         "DEFAULT_FROM_EMAIL",
-        default=EMAIL_HOST_USER or "no-reply@smartcollectornahuala.com"
+        default=(EMAIL_HOST_USER or "no-reply@smartcollectornahuala.com")
     )
 
-    # Opcional: timeout para evitar cuelgues
     EMAIL_TIMEOUT = config("EMAIL_TIMEOUT", default=20, cast=int)
+
+# Opcional: prefijo de asunto
+EMAIL_SUBJECT_PREFIX = config("EMAIL_SUBJECT_PREFIX", default="[Smart Collector] ")
+
+# ======================================================
+# ✅ LOGGING (para ver el error real de correo en Render)
+# ======================================================
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django.request": {"handlers": ["console"], "level": "ERROR", "propagate": True},
+        "django.core.mail": {"handlers": ["console"], "level": "INFO", "propagate": True},
+    },
+}
