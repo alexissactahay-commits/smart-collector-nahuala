@@ -26,15 +26,16 @@ body {
 
 /* ================================
    LOGO INSTITUCIONAL FIJO (ESQUINA)
-   DOBLE TAMAÑO – OPCIÓN 3
+   RESPONSIVE FLUIDO (se reduce en móvil)
    ================================ */
 .app-watermark {
   position: fixed;
   bottom: 20px;
   right: 20px;
 
-  width: 220px;      /* ⬅️ DOBLE tamaño */
-  height: 220px;     /* ⬅️ DOBLE tamaño */
+  /* 👇 Tamaño fluido: móvil pequeño -> desktop grande */
+  width: clamp(110px, 18vw, 220px);
+  height: clamp(110px, 18vw, 220px);
 
   background-image: url("./assets/logo-nahuala.PNG");
   background-repeat: no-repeat;
@@ -49,14 +50,16 @@ body {
 /* ================================
    PLACA INSTITUCIONAL
    TEXTO ADMINISTRACIÓN
+   RESPONSIVE FLUIDO (se reduce en móvil)
    ================================ */
 .app-footer-badge {
   position: fixed;
   bottom: 24px;
   left: 24px;
 
-  padding: 10px 16px;
-  border-radius: 14px;
+  /* 👇 padding fluido */
+  padding: clamp(6px, 1.2vw, 10px) clamp(10px, 2vw, 16px);
+  border-radius: clamp(10px, 2vw, 14px);
 
   background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(6px);
@@ -67,29 +70,54 @@ body {
 
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: clamp(6px, 1vw, 10px);
 
-  font-size: 12px;
+  /* 👇 Fuente fluida */
+  font-size: clamp(10px, 1.4vw, 12px);
   font-weight: 600;
   letter-spacing: 0.4px;
   color: rgba(0, 0, 0, 0.75);
+
+  /* Para que no se salga en pantallas muy pequeñas */
+  max-width: 78vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   pointer-events: none;
   z-index: 11;
 }
 
-/* Punto institucional */
+/* Punto institucional (también responsive) */
 .app-footer-dot {
-  width: 10px;
-  height: 10px;
+  width: clamp(7px, 1.2vw, 10px);
+  height: clamp(7px, 1.2vw, 10px);
   border-radius: 50%;
   background: rgba(0, 123, 255, 0.85);
+  flex: 0 0 auto;
 }
 
 /* Resalte del texto principal */
 .app-footer-badge span {
   font-weight: 800;
   color: rgba(0, 0, 0, 0.9);
+}
+
+/* ================================
+   AJUSTES EXTRA PARA MÓVIL
+   ================================ */
+@media (max-width: 480px) {
+  .app-watermark {
+    bottom: 10px;
+    right: 10px;
+    opacity: 0.30; /* un poquito más sutil en móvil */
+  }
+
+  .app-footer-badge {
+    bottom: 10px;
+    left: 10px;
+    max-width: 84vw;
+  }
 }
 
 /* ================================
