@@ -40,6 +40,10 @@ from core.views import (
     admin_routes_view,
     admin_route_detail_view,
     admin_route_dates_view,
+
+    # ✅✅✅ NUEVO: borrar fecha programada (admin)
+    admin_route_date_delete_view,
+
     admin_route_schedules_view,
     admin_route_schedule_delete_view,
     send_message_view,
@@ -139,8 +143,11 @@ urlpatterns = [
     path("api/admin/routes/", admin_routes_view),
     path("api/admin/routes/<int:pk>/", admin_route_detail_view),
 
-    # 🔥 Fechas de ruta
+    # 🔥 Fechas de ruta (GET/POST)
     path("api/admin/route-dates/", admin_route_dates_view),
+
+    # ✅✅✅ Fechas de ruta (DELETE)
+    path("api/admin/route-dates/<int:pk>/", admin_route_date_delete_view),
 
     # 🔥 Horarios de ruta (admin)
     path("api/admin/route-schedules/", admin_route_schedules_view),
