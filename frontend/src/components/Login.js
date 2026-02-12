@@ -5,12 +5,11 @@ import axios from "axios";
 import "./Login.css";
 
 // ================================
-// NORMALIZAR API_URL (como en el resto del proyecto)
+// NORMALIZAR API_URL
 // ================================
 const normalizeApiBase = () => {
   let base = process.env.REACT_APP_API_URL || "http://localhost:8000";
-  base = base.replace(/\/+$/, ""); // quitar slash final
-  // OJO: aquí NO agregamos /api, porque buildURL ya recibe /api/login/
+  base = base.replace(/\/+$/, "");
   return base;
 };
 
@@ -28,8 +27,24 @@ const Login = () => {
 
   const navigate = useNavigate();
 
+  const postLogin = async () => {
+    return axios.post(
+      buildURL("/api/login/"),
+      {
+        identifier: identifier.trim(),
+        password: password,
+      },
+      {
+        headers: { "Content-Type": "application/json" },
+        timeout: 30000, // ⬅️ aumentado a 30s
+      }
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (loading) return; // ✅ evita doble submit
 
     if (!identifier.trim() || !password.trim()) {
       alert("Por favor llene todos los campos.");
@@ -39,20 +54,25 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post(
-        buildURL("/api/login/"), // ✅ tu endpoint correcto
-        {
-          identifier: identifier.trim(),
-          password: password,
-        },
-        {
-          headers: { "Content-Type": "application/json" },
-          timeout: 15000,
-        }
-      );
+      let response;
 
-      // Tu backend devuelve: access, refresh, role, username, user_id
-      // Dejamos fallback por si en algún momento cambia.
+      try {
+        response = await postLogin();
+      } catch (err) {
+        // ✅ retry automático si fue problema de red / cold start
+        const status = err?.response?.status;
+        const isNetwork = !err?.response;
+        const isGateway = status === 502 || status === 503 || status === 504;
+        const isTimeout = err?.code === "ECONNABORTED";
+
+        if (isNetwork || isGateway || isTimeout) {
+          await new Promise((r) => setTimeout(r, 800));
+          response = await postLogin();
+        } else {
+          throw err;
+        }
+      }
+
       const access =
         response?.data?.access ||
         response?.data?.token ||
@@ -63,45 +83,39 @@ const Login = () => {
       const userId = response?.data?.user_id || "";
 
       if (!access) {
-        alert("Login correcto, pero no se recibió token. Revisa el backend.");
+        alert("Login correcto, pero no se recibió token.");
+        setLoading(false);
         return;
       }
 
-      // Limpiar sesión anterior (importante)
-      localStorage.removeItem("token");
-      localStorage.removeItem("userRole");
-      localStorage.removeItem("username");
-      localStorage.removeItem("userId");
-
-      // Guardar datos en localStorage
+      // ✅ Guardar primero, luego redirigir
       localStorage.setItem("token", access);
       localStorage.setItem("userRole", String(roleRaw).toLowerCase());
       localStorage.setItem("username", username);
       if (userId) localStorage.setItem("userId", String(userId));
 
-      // Redirección por rol
+      // ✅ Redirección limpia (evita parpadeo)
       if (String(roleRaw).toLowerCase() === "admin") {
-        navigate("/admin-dashboard", { replace: true });
+        window.location.replace("/admin-dashboard");
       } else {
-        navigate("/user-dashboard", { replace: true });
+        window.location.replace("/user-dashboard");
       }
+
     } catch (error) {
       console.error("Error de login:", error);
 
       if (error.response) {
         if (error.response.status === 401) {
           alert("Usuario o contraseña incorrectos.");
-          return;
-        }
-        if (error.response.status === 403) {
+        } else if (error.response.status === 403) {
           alert("No tienes permisos para ingresar.");
-          return;
+        } else {
+          alert("Error del servidor. Intente más tarde.");
         }
-        alert("Error del servidor. Intente más tarde.");
       } else if (error.code === "ECONNABORTED") {
-        alert("Tiempo de espera agotado. Verifica que Django esté corriendo.");
+        alert("Tiempo de espera agotado. Intente nuevamente.");
       } else {
-        alert("No se pudo conectar con el servidor. Verifique que Django esté corriendo.");
+        alert("No se pudo conectar con el servidor.");
       }
     } finally {
       setLoading(false);
@@ -163,7 +177,6 @@ const Login = () => {
           </div>
 
           <hr />
-          {/* 🔕 LOGIN CON GOOGLE DESACTIVADO */}
         </form>
       </div>
     </div>
