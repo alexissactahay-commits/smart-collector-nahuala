@@ -520,6 +520,86 @@ def admin_route_schedules_view(request):
     if route_val is not None:
         payload["route_id"] = route_val
 
+    # ✅✅✅ FIX CRÍTICO: normalizar día de semana para que NO se guarde como Lunes por default
+    # Acepta: 0-6, "0"-"6", "Lunes", "Miércoles", "miercoles", "Wednesday", etc.
+    def _normalize_day(value):
+        if value is None:
+            return None
+
+        # si viene lista, tomamos el primero
+        if isinstance(value, (list, tuple)) and len(value) > 0:
+            value = value[0]
+
+        # si ya es int
+        if isinstance(value, int):
+            return value if 0 <= value <= 6 else None
+
+        s = str(value).strip()
+        if not s:
+            return None
+
+        # si viene como "2"
+        if s.isdigit():
+            n = int(s)
+            return n if 0 <= n <= 6 else None
+
+        # normalizar texto
+        txt = s.lower()
+
+        # quitar tildes comunes para comparar
+        txt = (
+            txt.replace("á", "a")
+               .replace("é", "e")
+               .replace("í", "i")
+               .replace("ó", "o")
+               .replace("ú", "u")
+               .replace("ü", "u")
+        )
+
+        # quitar posibles puntos/espacios extras
+        txt = txt.replace(".", "").strip()
+
+        mapping = {
+            "lunes": 0,
+            "martes": 1,
+            "miercoles": 2,
+            "miércoles": 2,   # por si viene con tilde, aunque arriba ya la quitamos
+            "jueves": 3,
+            "viernes": 4,
+            "sabado": 5,
+            "sábado": 5,
+            "domingo": 6,
+
+            # inglés (por si algún componente manda en inglés)
+            "monday": 0,
+            "tuesday": 1,
+            "wednesday": 2,
+            "thursday": 3,
+            "friday": 4,
+            "saturday": 5,
+            "sunday": 6,
+        }
+
+        return mapping.get(txt, None)
+
+    # buscamos el campo del día en varios nombres por compatibilidad
+    day_val = payload.get("day_of_week")
+    if day_val is None:
+        day_val = payload.get("day")  # por si el frontend manda "day"
+    if day_val is None:
+        day_val = payload.get("weekday")  # por si manda "weekday"
+
+    normalized_day = _normalize_day(day_val)
+    if normalized_day is not None:
+        payload["day_of_week"] = normalized_day
+    else:
+        # ⚠️ Importante: si no viene el día, NO dejamos que se vaya a default (Lunes)
+        # Esto evita exactamente tu bug.
+        return Response(
+            {"error": "day_of_week es obligatorio y debe ser 0-6 o un nombre de día válido (Ej: Miércoles)."},
+            status=400
+        )
+
     def _parse_time(value):
         if value is None:
             return None
