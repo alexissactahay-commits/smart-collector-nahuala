@@ -16,64 +16,86 @@ const buildURL = (endpoint) => {
   return API + endpoint;
 };
 
-const dayLabelFromKey = (key) => {
-  // Acepta números o strings (según como esté guardado day_of_week en tu modelo)
-  const s = String(key ?? "").toLowerCase();
+// ✅ NUEVO: normaliza claves de día (quita tildes, espacios, etc.)
+const normalizeDayKey = (key) => {
+  if (key === undefined || key === null) return null;
 
-  // si viene número 0-6 (lunes=0)
-  const asNum = Number(s);
-  if (!Number.isNaN(asNum)) {
-    const mapNum = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-    return mapNum[asNum] || "Día";
+  // Si viene number (0-6)
+  if (typeof key === "number" && Number.isFinite(key)) return key;
+
+  const s0 = String(key).trim();
+  if (!s0) return null;
+
+  // Si viene string numérica "0-6"
+  if (/^\d+$/.test(s0)) {
+    const n = Number(s0);
+    if (Number.isFinite(n)) return n;
   }
 
-  // si viene texto
+  // Quitar tildes y normalizar
+  const s = s0
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // quita acentos
+    .replace(/\./g, "")
+    .trim();
+
+  const alias = {
+    monday: "lunes",
+    lunes: "lunes",
+    tuesday: "martes",
+    martes: "martes",
+    wednesday: "miercoles",
+    miercoles: "miercoles",
+    jueves: "jueves",
+    thursday: "jueves",
+    friday: "viernes",
+    viernes: "viernes",
+    saturday: "sabado",
+    sabado: "sabado",
+    sunday: "domingo",
+    domingo: "domingo",
+  };
+
+  return alias[s] || s; // si viene raro, al menos lo dejamos consistente
+};
+
+const dayLabelFromKey = (key) => {
+  // Acepta números o strings ya normalizados
+  if (typeof key === "number") {
+    const mapNum = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+    return mapNum[key] || "Día";
+  }
+
+  const s = String(key ?? "").toLowerCase();
+
   const mapText = {
     lunes: "Lunes",
-    monday: "Lunes",
     martes: "Martes",
-    tuesday: "Martes",
     miercoles: "Miércoles",
-    miércoles: "Miércoles",
-    wednesday: "Miércoles",
     jueves: "Jueves",
-    thursday: "Jueves",
     viernes: "Viernes",
-    friday: "Viernes",
     sabado: "Sábado",
-    sábado: "Sábado",
-    saturday: "Sábado",
     domingo: "Domingo",
-    sunday: "Domingo",
   };
 
   return mapText[s] || "Día";
 };
 
 const sortDayKey = (key) => {
-  const s = String(key ?? "").toLowerCase();
-  const asNum = Number(s);
-  if (!Number.isNaN(asNum)) return asNum;
+  if (typeof key === "number") return key;
 
   const order = {
     lunes: 0,
-    monday: 0,
     martes: 1,
-    tuesday: 1,
     miercoles: 2,
-    miércoles: 2,
-    wednesday: 2,
     jueves: 3,
-    thursday: 3,
     viernes: 4,
-    friday: 4,
     sabado: 5,
-    sábado: 5,
-    saturday: 5,
     domingo: 6,
-    sunday: 6,
   };
 
+  const s = String(key ?? "").toLowerCase();
   return order[s] ?? 99;
 };
 
@@ -95,7 +117,6 @@ const HoursView = () => {
           return;
         }
 
-        // ✅ endpoint ciudadano
         const res = await axios.get(buildURL("/citizen/route-schedules/"), {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -113,13 +134,14 @@ const HoursView = () => {
     loadSchedules();
   }, [token]);
 
-  // Agrupar horarios por día de semana
+  // ✅ Agrupar horarios por día (normalizado)
   const groupedByDay = useMemo(() => {
     const map = new Map();
 
     (Array.isArray(schedules) ? schedules : []).forEach((s) => {
-      const dayKey = s?.day_of_week;
-      if (dayKey === undefined || dayKey === null) return;
+      const rawDayKey = s?.day_of_week;
+      const dayKey = normalizeDayKey(rawDayKey);
+      if (dayKey === null) return;
 
       const start = s?.start_time || "--:--";
       const end = s?.end_time || "--:--";
@@ -143,18 +165,16 @@ const HoursView = () => {
     }
 
     // devolver como array ordenado por día
-    const out = Array.from(map.entries())
+    return Array.from(map.entries())
       .map(([dayKey, items]) => ({
         dayKey,
         dayName: dayLabelFromKey(dayKey),
         items,
       }))
       .sort((a, b) => sortDayKey(a.dayKey) - sortDayKey(b.dayKey));
-
-    return out;
   }, [schedules]);
 
-  // Mostrar al menos Lunes-Viernes aunque no haya data
+  // Mostrar al menos Lunes-Viernes aunque no haya data (cuando backend devuelve texto)
   const baseDays = useMemo(
     () => [
       { dayKey: "lunes", dayName: "Lunes" },
@@ -167,18 +187,15 @@ const HoursView = () => {
   );
 
   const viewDays = useMemo(() => {
-    // si el backend devuelve day_of_week como números, igual lo mostramos tal cual venga
-    // pero también queremos garantizar L-V visibles
-    const hasTextKeys = groupedByDay.some((d) => typeof d.dayKey === "string");
-    if (!hasTextKeys) {
-      // backend numérico: no forzamos L-V con texto, solo mostramos lo que venga
+    const anyNumeric = groupedByDay.some((d) => typeof d.dayKey === "number");
+    if (anyNumeric) {
+      // Si el backend devuelve números 0-6, mostramos lo que venga
       return groupedByDay;
     }
 
-    // backend texto: aseguramos L-V
+    // Backend texto: aseguramos L-V
     const map = new Map(groupedByDay.map((d) => [String(d.dayKey).toLowerCase(), d]));
-    const result = baseDays.map((d) => map.get(d.dayKey) || { ...d, items: [] });
-    return result;
+    return baseDays.map((d) => map.get(d.dayKey) || { ...d, items: [] });
   }, [groupedByDay, baseDays]);
 
   return (
