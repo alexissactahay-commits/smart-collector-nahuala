@@ -510,91 +510,62 @@ def admin_route_schedules_view(request):
 
     payload = request.data.copy()
 
+    # -------- normalizar route_id --------
     route_val = payload.get("route_id", None)
     if route_val is None:
         route_val = payload.get("route", None)
-
     if isinstance(route_val, dict):
         route_val = route_val.get("id")
-
     if route_val is not None:
         payload["route_id"] = route_val
 
-    # ✅✅✅ FIX REAL: guardar el día correctamente (texto) en el campo REAL del modelo/serializer
-    def _strip_accents(s: str) -> str:
+    # -------- helpers de día --------
+    def _strip_accents_lower(s: str) -> str:
+        s = str(s).strip().lower()
         return (
-            s.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u").replace("ü", "u")
-             .replace("Á", "A").replace("É", "E").replace("Í", "I").replace("Ó", "O").replace("Ú", "U").replace("Ü", "U")
+            s.replace("á", "a").replace("é", "e").replace("í", "i")
+             .replace("ó", "o").replace("ú", "u").replace("ü", "u")
         )
 
-    def _normalize_day_to_spanish_title(value):
-        """
-        Convierte:
-        - "Miércoles" / "miercoles" / "WEDNESDAY" / etc
-        A:
-        - "Miércoles" (formato estándar)
-        """
-        if value is None:
-            return None
+    DAY_CANONICAL = {
+        "lunes": "Lunes",
+        "martes": "Martes",
+        "miercoles": "Miércoles",
+        "miércoles": "Miércoles",
+        "jueves": "Jueves",
+        "viernes": "Viernes",
+        "sabado": "Sábado",
+        "sábado": "Sábado",
+        "domingo": "Domingo",
+        "monday": "Lunes",
+        "tuesday": "Martes",
+        "wednesday": "Miércoles",
+        "thursday": "Jueves",
+        "friday": "Viernes",
+        "saturday": "Sábado",
+        "sunday": "Domingo",
+    }
 
-        if isinstance(value, (list, tuple)) and value:
-            value = value[0]
+    incoming_day = payload.get("day_of_week") or payload.get("day") or payload.get("weekday")
+    if incoming_day is None or str(incoming_day).strip() == "":
+        return Response({"error": "day_of_week es obligatorio (Ej: Miércoles)."}, status=400)
 
-        s = str(value).strip()
-        if not s:
-            return None
+    key = _strip_accents_lower(incoming_day).replace(".", "").strip()
+    canonical_day = DAY_CANONICAL.get(key)
 
-        s_low = _strip_accents(s).lower().replace(".", "").strip()
+    # Si viene numérico "0-6"
+    numeric_day = None
+    if canonical_day is None and str(incoming_day).strip().isdigit():
+        n = int(str(incoming_day).strip())
+        if 0 <= n <= 6:
+            numeric_day = n
+        else:
+            return Response({"error": "day_of_week numérico debe ser 0-6."}, status=400)
 
-        mapping = {
-            "lunes": "Lunes",
-            "martes": "Martes",
-            "miercoles": "Miércoles",
-            "jueves": "Jueves",
-            "viernes": "Viernes",
-            "sabado": "Sábado",
-            "domingo": "Domingo",
+    if canonical_day is None and numeric_day is None:
+        return Response({"error": "day_of_week inválido. Ej: Miércoles."}, status=400)
 
-            "monday": "Lunes",
-            "tuesday": "Martes",
-            "wednesday": "Miércoles",
-            "thursday": "Jueves",
-            "friday": "Viernes",
-            "saturday": "Sábado",
-            "sunday": "Domingo",
-        }
-        return mapping.get(s_low)
-
-    # Tomar día desde cualquier nombre posible
-    incoming_day = payload.get("day_of_week")
-    if incoming_day is None:
-        incoming_day = payload.get("day")
-    if incoming_day is None:
-        incoming_day = payload.get("weekday")
-
-    normalized_day_text = _normalize_day_to_spanish_title(incoming_day)
-
-    # Si no viene día válido, no dejamos que el modelo meta default "Lunes" sin querer
-    if normalized_day_text is None:
-        return Response(
-            {"error": "day_of_week es obligatorio y debe ser un día válido (Ej: Miércoles)."},
-            status=400
-        )
-
-    # Detectar qué campo acepta el serializer (day / weekday / day_of_week)
-    serializer_fields = set(RouteScheduleSerializer().fields.keys())
-
-    # Meter el valor en el/los campos que existan
-    if "day" in serializer_fields:
-        payload["day"] = normalized_day_text
-    if "weekday" in serializer_fields:
-        payload["weekday"] = normalized_day_text
-    if "day_of_week" in serializer_fields:
-        payload["day_of_week"] = normalized_day_text
-
-    # Limpiar payload: dejar SOLO campos que el serializer acepta (para no romper is_valid)
-    payload = {k: v for k, v in payload.items() if k in serializer_fields}
-
+    # -------- parseo de tiempos --------
     def _parse_time(value):
         if value is None:
             return None
@@ -613,11 +584,63 @@ def admin_route_schedules_view(request):
     payload["start_time"] = _parse_time(payload.get("start_time"))
     payload["end_time"] = _parse_time(payload.get("end_time"))
 
+    if payload["start_time"] is None or payload["end_time"] is None:
+        return Response(
+            {"error": "start_time y end_time son obligatorios (HH:MM o HH:MM:SS)."},
+            status=400
+        )
+
+    # -------- guardar con serializer (pero puede ignorar day_of_week) --------
     serializer = RouteScheduleSerializer(data=payload)
     if not serializer.is_valid():
         return Response(serializer.errors, status=400)
 
     nuevo = serializer.save()
+
+    # ==========================================================
+    # ✅ FIX 100%: FORZAR day_of_week DIRECTO EN DB
+    # (evita que el default "Lunes" se quede)
+    # ==========================================================
+    try:
+        field = RouteSchedule._meta.get_field("day_of_week")
+        field_type = field.get_internal_type()
+
+        # Si el usuario mandó número, lo convertimos a label según choices
+        if numeric_day is not None:
+            if field.choices:
+                first_label = str(field.choices[0][1]).lower()
+                if "domingo" in first_label:
+                    order = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
+                else:
+                    order = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+            else:
+                order = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+            canonical_day = order[numeric_day]
+
+        # Si DB es numérica: convertir label a número usando choices
+        if field_type in ("IntegerField", "SmallIntegerField", "PositiveSmallIntegerField"):
+            value_to_set = None
+            if field.choices:
+                for v, lbl in field.choices:
+                    if str(lbl) == str(canonical_day):
+                        value_to_set = v
+                        break
+
+            if value_to_set is None:
+                # fallback 0=Lunes
+                mapping0lunes = {"Lunes": 0, "Martes": 1, "Miércoles": 2, "Jueves": 3, "Viernes": 4, "Sábado": 5, "Domingo": 6}
+                value_to_set = mapping0lunes.get(canonical_day, 0)
+
+            setattr(nuevo, "day_of_week", value_to_set)
+            nuevo.save(update_fields=["day_of_week"])
+        else:
+            # Si DB es texto: guardar label
+            setattr(nuevo, "day_of_week", canonical_day)
+            nuevo.save(update_fields=["day_of_week"])
+
+    except Exception as e:
+        logger.exception("ERROR forzando day_of_week en RouteSchedule: %s", repr(e))
+
     return Response(RouteScheduleSerializer(nuevo).data, status=201)
 
 
