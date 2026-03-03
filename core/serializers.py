@@ -162,11 +162,19 @@ class RouteScheduleSerializer(serializers.ModelSerializer):
         required=True
     )
 
-    # ✅✅✅ FIX: devolver day_of_week (pero calculado desde la ruta)
-    # Esto lo necesita el frontend para filtrar horarios por día.
-    day_of_week = serializers.SerializerMethodField(read_only=True)
+    # ✅✅✅ FIX REAL:
+    # day_of_week debe ser EL CAMPO DEL HORARIO (RouteSchedule),
+    # NO calculado desde la ruta.
+    #
+    # Nota: si tu modelo RouteSchedule tiene day_of_week con choices,
+    # DRF lo maneja como ChoiceField automáticamente.
+    # Si no, igual funciona como CharField.
+    day_of_week = serializers.CharField(required=True)
 
-    def get_day_of_week(self, obj):
+    # (Opcional) por si querés también ver el día que trae la ruta:
+    route_day_of_week = serializers.SerializerMethodField(read_only=True)
+
+    def get_route_day_of_week(self, obj):
         try:
             return obj.route.day_of_week if obj.route else None
         except Exception:
@@ -178,7 +186,8 @@ class RouteScheduleSerializer(serializers.ModelSerializer):
             'id',
             'route',
             'route_id',
-            'day_of_week',   # ✅ vuelve a venir para el frontend
+            'day_of_week',        # ✅ ahora sí es del horario
+            'route_day_of_week',  # ✅ extra (no rompe)
             'start_time',
             'end_time',
             'created_at'
@@ -203,3 +212,4 @@ class VehicleSerializer(serializers.ModelSerializer):
             'last_update',
             'route'
         ]
+        
