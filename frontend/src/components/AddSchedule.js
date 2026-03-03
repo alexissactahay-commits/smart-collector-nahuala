@@ -34,10 +34,9 @@ const AddSchedule = () => {
     const status = err.response?.status;
     const data = err.response?.data;
 
-    // Cuando el backend revienta con HTML (ImproperlyConfigured), viene como string enorme
     const asText =
       typeof data === "string"
-        ? data.slice(0, 1200) // recortar para que no congele
+        ? data.slice(0, 1200)
         : JSON.stringify(data || {}, null, 2);
 
     console.error(`❌ ${title}`, { status, data, err });
@@ -81,9 +80,25 @@ const AddSchedule = () => {
   // Formato seguro para TimeField en DRF: HH:MM:SS
   const normalizeTime = (t) => {
     if (!t) return "";
-    // input[type=time] normalmente devuelve HH:MM
     if (/^\d{2}:\d{2}$/.test(t)) return `${t}:00`;
-    return t; // si ya viene con segundos, lo deja
+    return t;
+  };
+
+  // ✅ helper: sacar el "día" del horario SIN confundir con el día de la ruta
+  // - primero intenta campos propios del schedule (day / weekday / day_of_week)
+  // - si no existen, entonces usa route.day_of_week como respaldo
+  const getScheduleDayLabel = (rs) => {
+    // Intentar día del horario
+    const scheduleDay =
+      rs?.day ||
+      rs?.weekday ||
+      rs?.day_of_week || // si tu backend sí lo devuelve como texto
+      rs?.day_name;
+
+    if (scheduleDay) return scheduleDay;
+
+    // Respaldo: día de la ruta (NO es lo ideal, pero evita mostrar vacío)
+    return rs?.route?.day_of_week || "—";
   };
 
   // ============================
@@ -148,18 +163,13 @@ const AddSchedule = () => {
   const availableDaysForSelectedRoute = useMemo(() => {
     if (!routeId) return [];
 
-    // Filtrar asignaciones de fechas para esta ruta
     const filtered = routeDates.filter((rd) => {
       const rid = rd.route?.id ?? rd.route_id ?? rd.route;
       return String(rid) === String(routeId);
     });
 
-    // De esas fechas, sacar su día en español
-    const days = filtered
-      .map((rd) => dateToDayEs(rd.date))
-      .filter(Boolean);
+    const days = filtered.map((rd) => dateToDayEs(rd.date)).filter(Boolean);
 
-    // Únicos, ordenados según semana
     const unique = Array.from(new Set(days));
     unique.sort((a, b) => DAY_ES.indexOf(a) - DAY_ES.indexOf(b));
     return unique;
@@ -175,7 +185,6 @@ const AddSchedule = () => {
       setDayOfWeek("");
       return;
     }
-    // Si el día actual no está disponible, ponemos el primero
     if (!availableDaysForSelectedRoute.includes(dayOfWeek)) {
       setDayOfWeek(availableDaysForSelectedRoute[0]);
     }
@@ -208,9 +217,16 @@ const AddSchedule = () => {
       return;
     }
 
+    // ✅ FIX: mandamos el día con 3 llaves diferentes por compatibilidad
+    // (porque tu backend/serializer puede esperar "day" o "weekday" y no "day_of_week")
     const payload = {
       route_id: routeId,
+
+      // Día del horario (compatibilidad máxima)
+      day: dayOfWeek,
+      weekday: dayOfWeek,
       day_of_week: dayOfWeek,
+
       start_time: normalizeTime(start_time),
       end_time: normalizeTime(end_time),
     };
@@ -255,9 +271,10 @@ const AddSchedule = () => {
 
   const selectedRouteObj = routes.find((r) => String(r.id) === String(routeId));
 
-  // Filtrar tabla a la ruta actual (opcional, ayuda mucho)
   const schedulesToShow = routeId
-    ? routeSchedules.filter((rs) => String(rs.route?.id ?? rs.route_id ?? rs.route) === String(routeId))
+    ? routeSchedules.filter(
+        (rs) => String(rs.route?.id ?? rs.route_id ?? rs.route) === String(routeId)
+      )
     : routeSchedules;
 
   return (
@@ -364,7 +381,10 @@ const AddSchedule = () => {
             {schedulesToShow.map((rs) => (
               <tr key={rs.id}>
                 <td>{rs.route?.name || "—"}</td>
-                <td>{rs.day_of_week || "—"}</td>
+
+                {/* ✅ FIX: mostrar el día REAL del horario, no el de la ruta */}
+                <td>{getScheduleDayLabel(rs)}</td>
+
                 <td>{String(rs.start_time || "").slice(0, 5)}</td>
                 <td>{String(rs.end_time || "").slice(0, 5)}</td>
                 <td>
