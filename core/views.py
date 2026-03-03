@@ -590,7 +590,7 @@ def admin_route_schedules_view(request):
             status=400
         )
 
-    # -------- guardar con serializer (pero puede ignorar day_of_week) --------
+    # -------- guardar con serializer --------
     serializer = RouteScheduleSerializer(data=payload)
     if not serializer.is_valid():
         return Response(serializer.errors, status=400)
@@ -598,48 +598,66 @@ def admin_route_schedules_view(request):
     nuevo = serializer.save()
 
     # ==========================================================
-    # ✅ FIX 100%: FORZAR day_of_week DIRECTO EN DB
-    # (evita que el default "Lunes" se quede)
+    # ✅ FIX REAL 100%: FORZAR EL DÍA EN EL CAMPO REAL DEL MODELO
+    # (day_of_week / day / weekday) para evitar el default "Lunes"
     # ==========================================================
     try:
-        field = RouteSchedule._meta.get_field("day_of_week")
-        field_type = field.get_internal_type()
+        # 1) Detectar campo real en el modelo
+        day_field_name = None
+        for candidate in ("day_of_week", "day", "weekday"):
+            try:
+                RouteSchedule._meta.get_field(candidate)
+                day_field_name = candidate
+                break
+            except Exception:
+                continue
 
-        # Si el usuario mandó número, lo convertimos a label según choices
-        if numeric_day is not None:
-            if field.choices:
-                first_label = str(field.choices[0][1]).lower()
-                if "domingo" in first_label:
-                    order = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
+        if day_field_name is None:
+            logger.warning("RouteSchedule no tiene campo day_of_week/day/weekday. No se pudo forzar el día.")
+        else:
+            field = RouteSchedule._meta.get_field(day_field_name)
+            field_type = field.get_internal_type()
+
+            # 2) Si vino numérico, convertir a label canónico
+            if numeric_day is not None:
+                if field.choices:
+                    first_label = str(field.choices[0][1]).lower()
+                    if "domingo" in first_label:
+                        order = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
+                    else:
+                        order = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
                 else:
                     order = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+                canonical_day = order[numeric_day]
+
+            # 3) Guardar según tipo de campo
+            if field_type in ("IntegerField", "SmallIntegerField", "PositiveSmallIntegerField"):
+                value_to_set = None
+
+                # si hay choices, usar el value del choice
+                if field.choices:
+                    for v, lbl in field.choices:
+                        if str(lbl) == str(canonical_day):
+                            value_to_set = v
+                            break
+
+                # fallback clásico 0=Lunes
+                if value_to_set is None:
+                    mapping0lunes = {
+                        "Lunes": 0, "Martes": 1, "Miércoles": 2,
+                        "Jueves": 3, "Viernes": 4, "Sábado": 5, "Domingo": 6
+                    }
+                    value_to_set = mapping0lunes.get(canonical_day, 0)
+
+                setattr(nuevo, day_field_name, value_to_set)
+                nuevo.save(update_fields=[day_field_name])
             else:
-                order = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
-            canonical_day = order[numeric_day]
-
-        # Si DB es numérica: convertir label a número usando choices
-        if field_type in ("IntegerField", "SmallIntegerField", "PositiveSmallIntegerField"):
-            value_to_set = None
-            if field.choices:
-                for v, lbl in field.choices:
-                    if str(lbl) == str(canonical_day):
-                        value_to_set = v
-                        break
-
-            if value_to_set is None:
-                # fallback 0=Lunes
-                mapping0lunes = {"Lunes": 0, "Martes": 1, "Miércoles": 2, "Jueves": 3, "Viernes": 4, "Sábado": 5, "Domingo": 6}
-                value_to_set = mapping0lunes.get(canonical_day, 0)
-
-            setattr(nuevo, "day_of_week", value_to_set)
-            nuevo.save(update_fields=["day_of_week"])
-        else:
-            # Si DB es texto: guardar label
-            setattr(nuevo, "day_of_week", canonical_day)
-            nuevo.save(update_fields=["day_of_week"])
+                # texto
+                setattr(nuevo, day_field_name, canonical_day)
+                nuevo.save(update_fields=[day_field_name])
 
     except Exception as e:
-        logger.exception("ERROR forzando day_of_week en RouteSchedule: %s", repr(e))
+        logger.exception("ERROR forzando día en RouteSchedule: %s", repr(e))
 
     return Response(RouteScheduleSerializer(nuevo).data, status=201)
 
