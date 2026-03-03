@@ -520,85 +520,80 @@ def admin_route_schedules_view(request):
     if route_val is not None:
         payload["route_id"] = route_val
 
-    # ✅✅✅ FIX CRÍTICO: normalizar día de semana para que NO se guarde como Lunes por default
-    # Acepta: 0-6, "0"-"6", "Lunes", "Miércoles", "miercoles", "Wednesday", etc.
-    def _normalize_day(value):
+    # ✅✅✅ FIX REAL: guardar el día correctamente (texto) en el campo REAL del modelo/serializer
+    def _strip_accents(s: str) -> str:
+        return (
+            s.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u").replace("ü", "u")
+             .replace("Á", "A").replace("É", "E").replace("Í", "I").replace("Ó", "O").replace("Ú", "U").replace("Ü", "U")
+        )
+
+    def _normalize_day_to_spanish_title(value):
+        """
+        Convierte:
+        - "Miércoles" / "miercoles" / "WEDNESDAY" / etc
+        A:
+        - "Miércoles" (formato estándar)
+        """
         if value is None:
             return None
 
-        # si viene lista, tomamos el primero
-        if isinstance(value, (list, tuple)) and len(value) > 0:
+        if isinstance(value, (list, tuple)) and value:
             value = value[0]
-
-        # si ya es int
-        if isinstance(value, int):
-            return value if 0 <= value <= 6 else None
 
         s = str(value).strip()
         if not s:
             return None
 
-        # si viene como "2"
-        if s.isdigit():
-            n = int(s)
-            return n if 0 <= n <= 6 else None
-
-        # normalizar texto
-        txt = s.lower()
-
-        # quitar tildes comunes para comparar
-        txt = (
-            txt.replace("á", "a")
-               .replace("é", "e")
-               .replace("í", "i")
-               .replace("ó", "o")
-               .replace("ú", "u")
-               .replace("ü", "u")
-        )
-
-        # quitar posibles puntos/espacios extras
-        txt = txt.replace(".", "").strip()
+        s_low = _strip_accents(s).lower().replace(".", "").strip()
 
         mapping = {
-            "lunes": 0,
-            "martes": 1,
-            "miercoles": 2,
-            "miércoles": 2,   # por si viene con tilde, aunque arriba ya la quitamos
-            "jueves": 3,
-            "viernes": 4,
-            "sabado": 5,
-            "sábado": 5,
-            "domingo": 6,
+            "lunes": "Lunes",
+            "martes": "Martes",
+            "miercoles": "Miércoles",
+            "jueves": "Jueves",
+            "viernes": "Viernes",
+            "sabado": "Sábado",
+            "domingo": "Domingo",
 
-            # inglés (por si algún componente manda en inglés)
-            "monday": 0,
-            "tuesday": 1,
-            "wednesday": 2,
-            "thursday": 3,
-            "friday": 4,
-            "saturday": 5,
-            "sunday": 6,
+            "monday": "Lunes",
+            "tuesday": "Martes",
+            "wednesday": "Miércoles",
+            "thursday": "Jueves",
+            "friday": "Viernes",
+            "saturday": "Sábado",
+            "sunday": "Domingo",
         }
+        return mapping.get(s_low)
 
-        return mapping.get(txt, None)
+    # Tomar día desde cualquier nombre posible
+    incoming_day = payload.get("day_of_week")
+    if incoming_day is None:
+        incoming_day = payload.get("day")
+    if incoming_day is None:
+        incoming_day = payload.get("weekday")
 
-    # buscamos el campo del día en varios nombres por compatibilidad
-    day_val = payload.get("day_of_week")
-    if day_val is None:
-        day_val = payload.get("day")  # por si el frontend manda "day"
-    if day_val is None:
-        day_val = payload.get("weekday")  # por si manda "weekday"
+    normalized_day_text = _normalize_day_to_spanish_title(incoming_day)
 
-    normalized_day = _normalize_day(day_val)
-    if normalized_day is not None:
-        payload["day_of_week"] = normalized_day
-    else:
-        # ⚠️ Importante: si no viene el día, NO dejamos que se vaya a default (Lunes)
-        # Esto evita exactamente tu bug.
+    # Si no viene día válido, no dejamos que el modelo meta default "Lunes" sin querer
+    if normalized_day_text is None:
         return Response(
-            {"error": "day_of_week es obligatorio y debe ser 0-6 o un nombre de día válido (Ej: Miércoles)."},
+            {"error": "day_of_week es obligatorio y debe ser un día válido (Ej: Miércoles)."},
             status=400
         )
+
+    # Detectar qué campo acepta el serializer (day / weekday / day_of_week)
+    serializer_fields = set(RouteScheduleSerializer().fields.keys())
+
+    # Meter el valor en el/los campos que existan
+    if "day" in serializer_fields:
+        payload["day"] = normalized_day_text
+    if "weekday" in serializer_fields:
+        payload["weekday"] = normalized_day_text
+    if "day_of_week" in serializer_fields:
+        payload["day_of_week"] = normalized_day_text
+
+    # Limpiar payload: dejar SOLO campos que el serializer acepta (para no romper is_valid)
+    payload = {k: v for k, v in payload.items() if k in serializer_fields}
 
     def _parse_time(value):
         if value is None:
