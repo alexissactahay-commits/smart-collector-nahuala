@@ -223,8 +223,16 @@ class RouteDate(models.Model):
 class RouteSchedule(models.Model):
     route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name='schedules')
 
-    # ✅ NO day_of_week aquí.
-    # La fecha/día real se obtendrá desde RouteDate (date.weekday()) y en frontend se agrupa por date.
+    # ✅✅✅ FIX DEFINITIVO:
+    # El horario TIENE que guardar su propio día.
+    # Si no, siempre vas a ver el day_of_week de la Route (por eso siempre era Lunes).
+    day_of_week = models.CharField(
+        max_length=10,
+        choices=DIA_SEMANA,
+        verbose_name="Día de la semana",
+        default='Lunes'
+    )
+
     start_time = models.TimeField(verbose_name="Hora de inicio")
     end_time = models.TimeField(verbose_name="Hora de fin")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creada el")
@@ -232,11 +240,11 @@ class RouteSchedule(models.Model):
     class Meta:
         verbose_name = "Horario de Ruta"
         verbose_name_plural = "Horarios de Ruta"
-        # Evita duplicar el mismo horario exacto para la misma ruta
-        unique_together = ('route', 'start_time', 'end_time')
+        # ✅ Cambiado: ahora el día también cuenta para evitar choques
+        unique_together = ('route', 'day_of_week', 'start_time', 'end_time')
 
     def __str__(self):
-        return f"{self.route.name} - {self.start_time} a {self.end_time}"
+        return f"{self.route.name} - {self.day_of_week} ({self.start_time} a {self.end_time})"
 
 
 class Vehicle(models.Model):
