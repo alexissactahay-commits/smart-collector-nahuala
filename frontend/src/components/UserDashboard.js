@@ -56,12 +56,6 @@ const UserDashboard = () => {
                     </div>
                     {isMenuOpen && (
                         <div className="dropdown-menu">
-                            <button onClick={() => alert('Funcionalidad de cambiar contraseña')}>
-                                Cambiar Contraseña
-                            </button>
-                            <button onClick={() => alert('Funcionalidad de cambiar foto')}>
-                                Cambiar Foto de Perfil
-                            </button>
                             <button onClick={handleLogout} className="logout-button">
                                 Cerrar Sesión
                             </button>
