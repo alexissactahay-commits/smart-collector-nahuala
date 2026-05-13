@@ -7,6 +7,7 @@ const CalendarView = () => {
   // NORMALIZAR API_URL
   // ================================
   let API_URL = process.env.REACT_APP_API_URL || "";
+
   API_URL = API_URL.replace(/\/+$/, "");
 
   if (!API_URL.endsWith("/api")) {
@@ -16,13 +17,18 @@ const CalendarView = () => {
   // ================================
 
   const [routeDates, setRouteDates] = useState([]);
+  const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [alert, setAlert] = useState({ message: "", type: "" });
+
+  const [alert, setAlert] = useState({
+    message: "",
+    type: "",
+  });
 
   const token = localStorage.getItem("token");
 
   // ----------------------------
-  // Parseo LOCAL de fecha
+  // Parseo local de fecha
   // ----------------------------
   const parseLocalDate = (dateStr) => {
     if (!dateStr || typeof dateStr !== "string") return null;
@@ -35,96 +41,8 @@ const CalendarView = () => {
     const m = Number(parts[1]);
     const d = Number(parts[2]);
 
-    if (!y || !m || !d) return null;
-
     return new Date(y, m - 1, d);
   };
-
-  // ----------------------------
-  // Cargar calendario
-  // ----------------------------
-  useEffect(() => {
-    const fetchCalendar = async () => {
-      try {
-        if (!token) {
-          setAlert({
-            message: "Tu sesión expiró. Inicia sesión nuevamente.",
-            type: "error",
-          });
-
-          window.location.href = "/login";
-          return;
-        }
-
-        const res = await axios.get(`${API_URL}/calendar/`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const data = Array.isArray(res.data) ? res.data : [];
-
-        setRouteDates(data);
-      } catch (err) {
-        console.error("Error al cargar calendario:", err);
-
-        const status = err.response?.status;
-
-        if (status === 401 || status === 403) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("userRole");
-          localStorage.removeItem("username");
-
-          setAlert({
-            message: "Sesión expirada o sin permisos.",
-            type: "error",
-          });
-
-          window.location.href = "/login";
-          return;
-        }
-
-        setAlert({
-          message: "No se pudo cargar el calendario.",
-          type: "error",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCalendar();
-  }, [API_URL, token]);
-
-  // ----------------------------
-  // Agrupar por fecha
-  // ----------------------------
-  const groupedByDate = useMemo(() => {
-    const map = {};
-
-    routeDates.forEach((item) => {
-      const dateKey = item?.date || "Sin fecha";
-
-      if (!map[dateKey]) {
-        map[dateKey] = [];
-      }
-
-      map[dateKey].push(item);
-    });
-
-    const sortedKeys = Object.keys(map).sort((a, b) => {
-      const da = parseLocalDate(a);
-      const db = parseLocalDate(b);
-
-      if (!da || !db) {
-        return String(a).localeCompare(String(b));
-      }
-
-      return da - db;
-    });
-
-    return { map, sortedKeys };
-  }, [routeDates]);
 
   // ----------------------------
   // Formatear fecha
@@ -154,8 +72,6 @@ const CalendarView = () => {
 
     const s = String(t).trim();
 
-    if (!s) return null;
-
     const parts = s.split(":");
 
     if (parts.length >= 2) {
@@ -165,6 +81,99 @@ const CalendarView = () => {
     return s;
   };
 
+  // ----------------------------
+  // Cargar datos
+  // ----------------------------
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        if (!token) {
+          window.location.href = "/login";
+          return;
+        }
+
+        // ✅ cargar fechas y horarios al mismo tiempo
+        const [calendarRes, schedulesRes] = await Promise.all([
+          axios.get(`${API_URL}/calendar/`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+
+          axios.get(`${API_URL}/citizen/route-schedules/`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+        ]);
+
+        setRouteDates(
+          Array.isArray(calendarRes.data)
+            ? calendarRes.data
+            : []
+        );
+
+        setSchedules(
+          Array.isArray(schedulesRes.data)
+            ? schedulesRes.data
+            : []
+        );
+      } catch (err) {
+        console.error("Error cargando calendario:", err);
+
+        setAlert({
+          message: "No se pudo cargar el calendario.",
+          type: "error",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [API_URL, token]);
+
+  // ----------------------------
+  // Agrupar por fecha
+  // ----------------------------
+  const groupedByDate = useMemo(() => {
+    const map = {};
+
+    routeDates.forEach((item) => {
+      const dateKey = item?.date || "Sin fecha";
+
+      if (!map[dateKey]) {
+        map[dateKey] = [];
+      }
+
+      map[dateKey].push(item);
+    });
+
+    const sortedKeys = Object.keys(map).sort((a, b) => {
+      const da = parseLocalDate(a);
+      const db = parseLocalDate(b);
+
+      return da - db;
+    });
+
+    return {
+      map,
+      sortedKeys,
+    };
+  }, [routeDates]);
+
+  // ----------------------------
+  // Obtener horarios reales de una ruta
+  // ----------------------------
+  const getSchedulesForRoute = (routeId) => {
+    return schedules.filter(
+      (s) => s?.route?.id === routeId
+    );
+  };
+
+  // ----------------------------
+  // Loading
+  // ----------------------------
   if (loading) {
     return (
       <div className="calendar-container">
@@ -188,7 +197,7 @@ const CalendarView = () => {
 
       {groupedByDate.sortedKeys.length === 0 ? (
         <p className="no-service-text">
-          Aún no hay fechas asignadas a rutas.
+          Aún no hay fechas asignadas.
         </p>
       ) : (
         <div className="calendar-grid">
@@ -198,21 +207,22 @@ const CalendarView = () => {
 
               <ul>
                 {groupedByDate.map[dateKey].map((item) => {
-                  const routeName =
-                    item?.route?.name || "Ruta sin nombre";
+                  const route = item?.route;
 
-                  // ✅ TOMAR HORARIOS DESDE schedules
-                  const schedules = Array.isArray(
-                    item?.route?.schedules
-                  )
-                    ? item.route.schedules
-                    : [];
+                  const routeName =
+                    route?.name || "Ruta";
+
+                  const routeId = route?.id;
+
+                  // ✅ horarios reales
+                  const realSchedules =
+                    getSchedulesForRoute(routeId);
 
                   // ✅ comunidades
                   const communities = Array.isArray(
-                    item?.route?.communities
+                    route?.communities
                   )
-                    ? item.route.communities
+                    ? route.communities
                     : [];
 
                   const communitiesText =
@@ -229,24 +239,26 @@ const CalendarView = () => {
                         {routeName}
                       </div>
 
-                      {/* ✅ MOSTRAR TODOS LOS HORARIOS */}
-                      {schedules.length > 0 ? (
-                        schedules.map((sch, idx) => {
-                          const st = formatTime(sch?.start_time);
-                          const et = formatTime(sch?.end_time);
-
-                          return (
-                            <div
-                              key={idx}
-                              style={{
-                                color: "#666",
-                                fontSize: "0.9rem",
-                              }}
-                            >
-                              Horario: {st} - {et}
-                            </div>
-                          );
-                        })
+                      {/* ✅ horarios reales */}
+                      {realSchedules.length > 0 ? (
+                        realSchedules.map((sch) => (
+                          <div
+                            key={sch.id}
+                            style={{
+                              color: "#666",
+                              fontSize: "0.9rem",
+                            }}
+                          >
+                            Horario:{" "}
+                            {formatTime(
+                              sch.start_time
+                            )}{" "}
+                            -{" "}
+                            {formatTime(
+                              sch.end_time
+                            )}
+                          </div>
+                        ))
                       ) : (
                         <div
                           style={{
@@ -258,6 +270,7 @@ const CalendarView = () => {
                         </div>
                       )}
 
+                      {/* ✅ comunidades */}
                       {communitiesText ? (
                         <div
                           style={{
