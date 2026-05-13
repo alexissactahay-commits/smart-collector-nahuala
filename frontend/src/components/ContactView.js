@@ -13,10 +13,10 @@ const ContactView = () => {
           <div className="contact-item">
             <span className="icon">📞</span>
             <div>
-              <h3>ALCALDE MUNICIPAL</h3>
-              <a href="">MANUEL GUARCHAJ</a>
+              <h3>ENCARGADO OFICINA DE MEDIO AMBIENTE Y RECURSOS NATURALES</h3>
+              <a href="">FRANCISCO ISMAEL TZAJ TZOC</a>
               <h3>Teléfono</h3>
-              <a href="tel:39792361">39792361</a>
+              <a href="tel:45086488">45086488</a>
             </div>
           </div>
           
