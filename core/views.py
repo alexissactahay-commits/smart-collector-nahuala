@@ -1023,19 +1023,38 @@ def my_notifications_view(request):
     return Response(data, status=200)
 
 
-@api_view(["DELETE"])
+@api_view(["PATCH", "PUT", "DELETE"])
 @permission_classes([IsAuthenticated])
 def my_notification_delete_view(request, pk):
     user = request.user
 
     n = get_object_or_404(Notification, pk=pk, usuario=user)
 
+    # ✅ MARCAR COMO LEÍDO
+    if request.method in ["PATCH", "PUT"]:
+        estado = request.data.get("estado", "leida")
+
+        if estado not in ["enviada", "pendiente", "leida"]:
+            return Response({"error": "Estado inválido."}, status=400)
+
+        n.estado = estado
+        n.save(update_fields=["estado"])
+
+        return Response({
+            "message": "Mensaje marcado como leído.",
+            "id": n.id,
+            "estado": n.estado,
+        }, status=200)
+
+    # ✅ ELIMINAR MENSAJE SOLO PARA EL CIUDADANO
     if getattr(n, "deleted_globally", False):
         return Response({"message": "El mensaje ya fue eliminado por administración."}, status=200)
 
     n.deleted_by_user = True
+
     if not n.deleted_at:
         n.deleted_at = timezone.now()
+
     n.save(update_fields=["deleted_by_user", "deleted_at"])
 
     return Response({"message": "Mensaje eliminado correctamente."}, status=200)
