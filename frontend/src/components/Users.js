@@ -6,14 +6,21 @@ import './Users.css';
 
 const Users = () => {
   const navigate = useNavigate();
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
 
+  // =========================
+  // CARGAR USUARIOS
+  // =========================
   const fetchUsers = useCallback(async () => {
     try {
+      setLoading(true);
+
       const res = await api.get('/api/admin/users/');
-      setUsers(res.data);
+
+      setUsers(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Error al cargar usuarios:', err);
 
@@ -26,7 +33,9 @@ const Users = () => {
     }
   }, [navigate]);
 
-  // Verificar autenticación al montar
+  // =========================
+  // VALIDAR LOGIN
+  // =========================
   useEffect(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('userRole');
@@ -39,61 +48,104 @@ const Users = () => {
     fetchUsers();
   }, [navigate, fetchUsers]);
 
-  // Cambiar rol de usuario
+  // =========================
+  // ACTUALIZAR ROL
+  // =========================
   const updateRole = async (userId, newRole) => {
     try {
-      await api.put('/api/admin/users/', {
-        id: userId,
+      // ✅ IMPORTANTE:
+      // usamos PATCH y endpoint con ID
+      await api.patch(`/api/admin/users/${userId}/`, {
         role: newRole,
       });
 
-      setUsers(prev =>
-        prev.map(user =>
-          user.id === userId ? { ...user, role: newRole } : user
+      // actualizar estado local
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === userId
+            ? { ...user, role: newRole }
+            : user
         )
       );
 
       setMessage(`Rol actualizado a ${newRole}`);
       setTimeout(() => setMessage(''), 3000);
+
     } catch (err) {
       console.error('Error al actualizar rol:', err);
-      alert('Error al actualizar el rol.');
+
+      console.error('Respuesta backend:', err.response?.data);
+
+      alert(
+        err.response?.data?.detail ||
+        err.response?.data?.error ||
+        'Error al actualizar el rol.'
+      );
     }
   };
 
-  // Activar / desactivar usuario
+  // =========================
+  // ACTIVAR / DESACTIVAR
+  // =========================
   const toggleActive = async (userId, isActive) => {
     try {
-      await api.put('/api/admin/users/', {
-        id: userId,
+      // ✅ PATCH con ID
+      await api.patch(`/api/admin/users/${userId}/`, {
         is_active: !isActive,
       });
 
-      setUsers(prev =>
-        prev.map(user =>
+      setUsers((prev) =>
+        prev.map((user) =>
           user.id === userId
             ? { ...user, is_active: !isActive }
             : user
         )
       );
 
-      setMessage(isActive ? 'Usuario desactivado' : 'Usuario activado');
+      setMessage(
+        isActive
+          ? 'Usuario desactivado'
+          : 'Usuario activado'
+      );
+
       setTimeout(() => setMessage(''), 3000);
+
     } catch (err) {
       console.error('Error al actualizar estado:', err);
-      alert('Error al actualizar el estado del usuario.');
+
+      console.error('Respuesta backend:', err.response?.data);
+
+      alert(
+        err.response?.data?.detail ||
+        err.response?.data?.error ||
+        'Error al actualizar el estado del usuario.'
+      );
     }
   };
 
+  // =========================
+  // LOADING
+  // =========================
   if (loading) {
-    return <div className="users-container">Cargando usuarios...</div>;
+    return (
+      <div className="users-container">
+        Cargando usuarios...
+      </div>
+    );
   }
 
+  // =========================
+  // RENDER
+  // =========================
   return (
     <div className="users-container">
       <h1>Lista de Usuarios - Smart Collector</h1>
 
-      {message && <div className="alert-message">{message}</div>}
+      {message && (
+        <div className="alert-message">
+          {message}
+        </div>
+      )}
 
       <table className="users-table">
         <thead>
@@ -105,36 +157,73 @@ const Users = () => {
             <th>Acciones</th>
           </tr>
         </thead>
+
         <tbody>
           {users.length === 0 ? (
             <tr>
-              <td colSpan="5" style={{ textAlign: 'center' }}>
+              <td
+                colSpan="5"
+                style={{ textAlign: 'center' }}
+              >
                 No hay usuarios registrados
               </td>
             </tr>
           ) : (
-            users.map(user => (
+            users.map((user) => (
               <tr key={user.id}>
                 <td>{user.username}</td>
+
                 <td>{user.email}</td>
-                <td>{user.role}</td>
-                <td>{user.is_active ? 'Activo' : 'Inactivo'}</td>
+
                 <td>
+                  {user.role === 'admin'
+                    ? 'Administrador'
+                    : 'Ciudadano'}
+                </td>
+
+                <td>
+                  {user.is_active
+                    ? 'Activo'
+                    : 'Inactivo'}
+                </td>
+
+                <td>
+                  {/* CAMBIAR ROL */}
                   {user.role === 'ciudadano' ? (
-                    <button onClick={() => updateRole(user.id, 'admin')}>
+                    <button
+                      onClick={() =>
+                        updateRole(user.id, 'admin')
+                      }
+                    >
                       Hacer Admin
                     </button>
                   ) : (
-                    <button onClick={() => updateRole(user.id, 'ciudadano')}>
+                    <button
+                      onClick={() =>
+                        updateRole(user.id, 'ciudadano')
+                      }
+                    >
                       Quitar Admin
                     </button>
                   )}
 
+                  {/* ACTIVAR / DESACTIVAR */}
                   <button
-                    onClick={() => toggleActive(user.id, user.is_active)}
-                    className={user.is_active ? 'btn-deactivate' : 'btn-activate'}
+                    onClick={() =>
+                      toggleActive(
+                        user.id,
+                        user.is_active
+                      )
+                    }
+                    className={
+                      user.is_active
+                        ? 'btn-deactivate'
+                        : 'btn-activate'
+                    }
                   >
-                    {user.is_active ? 'Desactivar' : 'Activar'}
+                    {user.is_active
+                      ? 'Desactivar'
+                      : 'Activar'}
                   </button>
                 </td>
               </tr>
