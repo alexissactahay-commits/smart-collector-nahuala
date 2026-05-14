@@ -168,23 +168,13 @@ const Users = () => {
   return (
     <div className="users-container">
 
-      {/* ✅ BOTÓN REGRESAR */}
-      <button
-        onClick={handleBack}
-        style={{
-          marginBottom: '15px',
-          background: '#1f4173',
-          color: '#fff',
-          border: 'none',
-          padding: '10px 18px',
-          borderRadius: '10px',
-          cursor: 'pointer',
-          fontWeight: 'bold',
-          boxShadow: '0 3px 8px rgba(0,0,0,0.2)'
-        }}
-      >
-        ← Regresar
-      </button>
+{/* ✅ BOTÓN REGRESAR */}
+<button
+  className="back-button"
+  onClick={handleBack}
+>
+  ← Regresar
+</button>
 
       <h1>Lista de Usuarios - Smart Collector</h1>
 
