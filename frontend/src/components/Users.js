@@ -16,8 +16,6 @@ const Users = () => {
   // =========================
   const fetchUsers = useCallback(async () => {
     try {
-      setLoading(true);
-
       const res = await api.get('/api/admin/users/');
 
       setUsers(Array.isArray(res.data) ? res.data : []);
@@ -53,15 +51,17 @@ const Users = () => {
   // =========================
   const updateRole = async (userId, newRole) => {
     try {
-      // ✅ IMPORTANTE:
-      // usamos PATCH y endpoint con ID
-      await api.patch(`/api/admin/users/${userId}/`, {
+
+      // ✅ TU BACKEND USA PUT
+      // ✅ Y EL ID EN EL BODY
+      await api.put('/api/admin/users/', {
+        id: userId,
         role: newRole,
       });
 
-      // actualizar estado local
-      setUsers((prev) =>
-        prev.map((user) =>
+      // actualizar vista
+      setUsers(prev =>
+        prev.map(user =>
           user.id === userId
             ? { ...user, role: newRole }
             : user
@@ -73,8 +73,7 @@ const Users = () => {
 
     } catch (err) {
       console.error('Error al actualizar rol:', err);
-
-      console.error('Respuesta backend:', err.response?.data);
+      console.error('Backend:', err.response?.data);
 
       alert(
         err.response?.data?.detail ||
@@ -89,13 +88,16 @@ const Users = () => {
   // =========================
   const toggleActive = async (userId, isActive) => {
     try {
-      // ✅ PATCH con ID
-      await api.patch(`/api/admin/users/${userId}/`, {
+
+      // ✅ TU BACKEND USA PUT
+      await api.put('/api/admin/users/', {
+        id: userId,
         is_active: !isActive,
       });
 
-      setUsers((prev) =>
-        prev.map((user) =>
+      // actualizar vista
+      setUsers(prev =>
+        prev.map(user =>
           user.id === userId
             ? { ...user, is_active: !isActive }
             : user
@@ -112,8 +114,7 @@ const Users = () => {
 
     } catch (err) {
       console.error('Error al actualizar estado:', err);
-
-      console.error('Respuesta backend:', err.response?.data);
+      console.error('Backend:', err.response?.data);
 
       alert(
         err.response?.data?.detail ||
@@ -169,7 +170,7 @@ const Users = () => {
               </td>
             </tr>
           ) : (
-            users.map((user) => (
+            users.map(user => (
               <tr key={user.id}>
                 <td>{user.username}</td>
 
@@ -188,6 +189,7 @@ const Users = () => {
                 </td>
 
                 <td>
+
                   {/* CAMBIAR ROL */}
                   {user.role === 'ciudadano' ? (
                     <button
@@ -225,6 +227,7 @@ const Users = () => {
                       ? 'Desactivar'
                       : 'Activar'}
                   </button>
+
                 </td>
               </tr>
             ))
