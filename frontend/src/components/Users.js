@@ -22,7 +22,10 @@ const Users = () => {
     } catch (err) {
       console.error('Error al cargar usuarios:', err);
 
-      if (err.response?.status === 401 || err.response?.status === 403) {
+      if (
+        err.response?.status === 401 ||
+        err.response?.status === 403
+      ) {
         localStorage.clear();
         navigate('/login', { replace: true });
       }
@@ -51,17 +54,13 @@ const Users = () => {
   // =========================
   const updateRole = async (userId, newRole) => {
     try {
-
-      // ✅ TU BACKEND USA PUT
-      // ✅ Y EL ID EN EL BODY
-      await api.put('/api/admin/users/', {
+      await api.patch('/api/admin/users/', {
         id: userId,
         role: newRole,
       });
 
-      // actualizar vista
-      setUsers(prev =>
-        prev.map(user =>
+      setUsers((prev) =>
+        prev.map((user) =>
           user.id === userId
             ? { ...user, role: newRole }
             : user
@@ -69,15 +68,19 @@ const Users = () => {
       );
 
       setMessage(`Rol actualizado a ${newRole}`);
-      setTimeout(() => setMessage(''), 3000);
+
+      setTimeout(() => {
+        setMessage('');
+      }, 3000);
 
     } catch (err) {
       console.error('Error al actualizar rol:', err);
-      console.error('Backend:', err.response?.data);
+
+      console.log('Backend:', err.response?.data);
 
       alert(
         err.response?.data?.detail ||
-        err.response?.data?.error ||
+        err.response?.data?.message ||
         'Error al actualizar el rol.'
       );
     }
@@ -88,16 +91,13 @@ const Users = () => {
   // =========================
   const toggleActive = async (userId, isActive) => {
     try {
-
-      // ✅ TU BACKEND USA PUT
-      await api.put('/api/admin/users/', {
+      await api.patch('/api/admin/users/', {
         id: userId,
         is_active: !isActive,
       });
 
-      // actualizar vista
-      setUsers(prev =>
-        prev.map(user =>
+      setUsers((prev) =>
+        prev.map((user) =>
           user.id === userId
             ? { ...user, is_active: !isActive }
             : user
@@ -110,15 +110,18 @@ const Users = () => {
           : 'Usuario activado'
       );
 
-      setTimeout(() => setMessage(''), 3000);
+      setTimeout(() => {
+        setMessage('');
+      }, 3000);
 
     } catch (err) {
       console.error('Error al actualizar estado:', err);
-      console.error('Backend:', err.response?.data);
+
+      console.log('Backend:', err.response?.data);
 
       alert(
         err.response?.data?.detail ||
-        err.response?.data?.error ||
+        err.response?.data?.message ||
         'Error al actualizar el estado del usuario.'
       );
     }
@@ -170,7 +173,7 @@ const Users = () => {
               </td>
             </tr>
           ) : (
-            users.map(user => (
+            users.map((user) => (
               <tr key={user.id}>
                 <td>{user.username}</td>
 
@@ -189,8 +192,6 @@ const Users = () => {
                 </td>
 
                 <td>
-
-                  {/* CAMBIAR ROL */}
                   {user.role === 'ciudadano' ? (
                     <button
                       onClick={() =>
@@ -209,7 +210,6 @@ const Users = () => {
                     </button>
                   )}
 
-                  {/* ACTIVAR / DESACTIVAR */}
                   <button
                     onClick={() =>
                       toggleActive(
@@ -227,7 +227,6 @@ const Users = () => {
                       ? 'Desactivar'
                       : 'Activar'}
                   </button>
-
                 </td>
               </tr>
             ))
