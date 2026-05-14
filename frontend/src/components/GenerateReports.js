@@ -4,13 +4,16 @@ import axios from "axios";
 import "./GenerateReports.css";
 
 const GenerateReports = () => {
+  const [allReports, setAllReports] = useState([]);
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Construir API_URL robusto (evita que quede solo "/api")
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
   const API_URL = useMemo(() => {
     let base = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000";
-    base = base.replace(/\/+$/, ""); // quitar / finales
+    base = base.replace(/\/+$/, "");
     if (!base.endsWith("/api")) base = `${base}/api`;
     return base;
   }, []);
@@ -23,9 +26,6 @@ const GenerateReports = () => {
       : { Accept: "application/json" };
   }, [token]);
 
-  // --------------------------
-  // Helpers
-  // --------------------------
   const normalizeList = (payload) => {
     if (Array.isArray(payload)) return payload;
     if (!payload || typeof payload !== "object") return [];
@@ -44,6 +44,38 @@ const GenerateReports = () => {
     return Number.isFinite(n) ? n : 0;
   };
 
+  const parseDateOnly = (dateStr) => {
+    if (!dateStr) return null;
+
+    const s = String(dateStr).slice(0, 10);
+    const parts = s.split("-");
+
+    if (parts.length !== 3) return null;
+
+    const y = Number(parts[0]);
+    const m = Number(parts[1]);
+    const d = Number(parts[2]);
+
+    if (!y || !m || !d) return null;
+
+    return new Date(y, m - 1, d);
+  };
+
+  const isInRange = (report) => {
+    const reportDateRaw = pickDate(report);
+    const reportDate = parseDateOnly(reportDateRaw);
+
+    if (!reportDate) return false;
+
+    const from = startDate ? parseDateOnly(startDate) : null;
+    const to = endDate ? parseDateOnly(endDate) : null;
+
+    if (from && reportDate < from) return false;
+    if (to && reportDate > to) return false;
+
+    return true;
+  };
+
   const computeDaysSinceFirst = (reports) => {
     if (!reports?.length) return 0;
 
@@ -57,14 +89,42 @@ const GenerateReports = () => {
 
     const first = new Date(Math.min(...dates.map((d) => d.getTime())));
     const now = new Date();
+
     const diffMs = now.getTime() - first.getTime();
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
     return days < 0 ? 0 : days;
   };
 
-  // --------------------------
-  // FETCH REPORT SUMMARY + LISTA REAL
-  // --------------------------
+  const buildSummary = (reports) => {
+    const total_reports = reports.length;
+
+    const resolved_reports = reports.filter(
+      (r) => r?.status === "resolved"
+    ).length;
+
+    const pending_reports = reports.filter(
+      (r) => r?.status === "pending"
+    ).length;
+
+    const unresolved_reports = reports.filter(
+      (r) => r?.status === "unresolved"
+    ).length;
+
+    const not_solved_reports = pending_reports + unresolved_reports;
+
+    const days_since_first_report = computeDaysSinceFirst(reports);
+
+    setReportData({
+      total_reports,
+      resolved_reports,
+      pending_reports,
+      unresolved_reports,
+      not_solved_reports,
+      days_since_first_report,
+    });
+  };
+
   const fetchReportData = async () => {
     try {
       if (!token) {
@@ -75,50 +135,14 @@ const GenerateReports = () => {
 
       setLoading(true);
 
-      // 1) Traer lista real de reportes (esto es lo que sí refleja la verdad)
       const listRes = await axios.get(`${API_URL}/admin/reports/`, {
         headers: authHeaders,
       });
 
       const reports = normalizeList(listRes.data);
 
-      const total_reports = reports.length;
-      const resolved_reports = reports.filter((r) => r?.status === "resolved").length;
-      const pending_reports = reports.filter((r) => r?.status === "pending").length;
-      const unresolved_reports = reports.filter((r) => r?.status === "unresolved").length;
-
-      const days_since_first_report = computeDaysSinceFirst(reports);
-
-      // 2) Intentar traer el summary del backend (si viene bien lo mezclamos)
-      let summary = {};
-      try {
-        const sumRes = await axios.get(`${API_URL}/admin/reports/generate/`, {
-          headers: authHeaders,
-        });
-        summary = sumRes.data || {};
-      } catch (e) {
-        // Si falla, no pasa nada: nos quedamos con lo calculado
-        summary = {};
-      }
-
-      // 3) Mezclar: prioridad a lo calculado desde /reports/ para los conteos
-      setReportData({
-        // rutas (si backend las manda bien, ok; si no, 0)
-        completed_routes: safeNum(summary.completed_routes),
-        pending_routes: safeNum(summary.pending_routes),
-
-        // reportes (SIEMPRE desde lista real)
-        total_reports,
-        resolved_reports,
-        pending_reports,
-        unresolved_reports,
-
-        // días (calculado real)
-        days_since_first_report,
-
-        // Power BI link (si viene del backend)
-        power_bi_link: (summary.power_bi_link || "").trim(),
-      });
+      setAllReports(reports);
+      buildSummary(reports);
     } catch (err) {
       console.error("Error al cargar informe:", err);
 
@@ -128,16 +152,34 @@ const GenerateReports = () => {
         return;
       }
 
-      alert("Error al cargar los datos del informe. Revisa el backend/endpoint.");
+      alert("Error al cargar los datos del informe.");
       setReportData(null);
     } finally {
       setLoading(false);
     }
   };
 
-  // --------------------------
-  // GENERAR PDF
-  // --------------------------
+  const applyDateFilter = () => {
+    if (startDate && endDate) {
+      const from = parseDateOnly(startDate);
+      const to = parseDateOnly(endDate);
+
+      if (from > to) {
+        alert("La fecha inicial no puede ser mayor que la fecha final.");
+        return;
+      }
+    }
+
+    const filtered = allReports.filter(isInRange);
+    buildSummary(filtered);
+  };
+
+  const clearDateFilter = () => {
+    setStartDate("");
+    setEndDate("");
+    buildSummary(allReports);
+  };
+
   const generatePDF = async () => {
     try {
       if (!token) {
@@ -146,21 +188,38 @@ const GenerateReports = () => {
         return;
       }
 
-      const response = await axios.get(`${API_URL}/admin/reports/generate-pdf/`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/pdf",
-        },
-        responseType: "blob",
-      });
+      const params = {};
+
+      if (startDate) params.start_date = startDate;
+      if (endDate) params.end_date = endDate;
+
+      const response = await axios.get(
+        `${API_URL}/admin/reports/generate-pdf/`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/pdf",
+          },
+          params,
+          responseType: "blob",
+        }
+      );
+
+      const fileName =
+        startDate || endDate
+          ? `informe_smart_collector_${startDate || "inicio"}_${endDate || "final"}.pdf`
+          : "informe_smart_collector.pdf";
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
+
       link.href = url;
-      link.setAttribute("download", "informe_smart_collector.pdf");
+      link.setAttribute("download", fileName);
+
       document.body.appendChild(link);
       link.click();
       link.remove();
+
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Error generando PDF:", err);
@@ -173,11 +232,12 @@ const GenerateReports = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // --------------------------
-  // UI
-  // --------------------------
   if (loading) {
-    return <div className="generate-reports-container">Cargando informe...</div>;
+    return (
+      <div className="generate-reports-container">
+        Cargando informe...
+      </div>
+    );
   }
 
   if (!reportData) {
@@ -188,23 +248,43 @@ const GenerateReports = () => {
     );
   }
 
-  const notSolved = safeNum(reportData.unresolved_reports) + safeNum(reportData.pending_reports);
-
   return (
     <div className="generate-reports-container">
       <h1>Generar Informes - Smart Collector</h1>
 
+      <div className="filter-section">
+        <h2>Filtrar reportes por rango de fechas</h2>
+
+        <div className="filter-row">
+          <div className="filter-group">
+            <label>Fecha inicial:</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+
+          <div className="filter-group">
+            <label>Fecha final:</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+
+          <button type="button" onClick={applyDateFilter}>
+            Aplicar filtro
+          </button>
+
+          <button type="button" onClick={clearDateFilter}>
+            Limpiar filtro
+          </button>
+        </div>
+      </div>
+
       <div className="summary-cards">
-        <div className="card">
-          <h3>Rutas Completadas</h3>
-          <p>{safeNum(reportData.completed_routes)}</p>
-        </div>
-
-        <div className="card">
-          <h3>Rutas Pendientes</h3>
-          <p>{safeNum(reportData.pending_routes)}</p>
-        </div>
-
         <div className="card">
           <h3>Reportes Recibidos</h3>
           <p>{safeNum(reportData.total_reports)}</p>
@@ -217,7 +297,7 @@ const GenerateReports = () => {
 
         <div className="card">
           <h3>Reportes No Solucionados</h3>
-          <p>{safeNum(notSolved)}</p>
+          <p>{safeNum(reportData.not_solved_reports)}</p>
         </div>
 
         <div className="card">
@@ -227,20 +307,9 @@ const GenerateReports = () => {
       </div>
 
       <div className="actions">
-        <button
-          onClick={() => {
-            const link = (reportData.power_bi_link || "").trim();
-            if (!link) {
-              alert("No hay link de Power BI configurado todavía.");
-              return;
-            }
-            window.open(link, "_blank");
-          }}
-        >
-          Ver en Power BI
+        <button onClick={generatePDF}>
+          Descargar informe en PDF
         </button>
-
-        <button onClick={generatePDF}>Descargar como PDF</button>
       </div>
     </div>
   );
