@@ -6,14 +6,19 @@ const MessagesView = () => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
+  const [readingId, setReadingId] = useState(null);
 
-  // ✅ Normalizar API_URL: evita /api/api y también evita crash si no existe env
   const API_URL = useMemo(() => {
     let base = process.env.REACT_APP_API_URL || "http://localhost:8000";
     base = String(base).replace(/\/+$/, "");
     if (!base.endsWith("/api")) base = `${base}/api`;
     return base;
   }, []);
+
+  const isUnreadEstado = (estado) => {
+    const e = String(estado || "").toLowerCase().trim();
+    return e === "pendiente" || e === "enviada" || e === "sin leer" || e === "unread";
+  };
 
   const fetchMessages = async () => {
     try {
@@ -34,6 +39,8 @@ const MessagesView = () => {
         body: msg.message || msg.detalle || "Mensaje sin contenido",
         date: msg.created_at ? new Date(msg.created_at).toLocaleString() : "Fecha no disponible",
         sender: msg.sender?.username || "Administración",
+        estado: msg.estado || "pendiente",
+        isUnread: isUnreadEstado(msg.estado),
       }));
 
       setMessages(formattedMessages);
@@ -49,11 +56,46 @@ const MessagesView = () => {
       setLoading(false);
     };
     run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [API_URL]);
 
-  // ✅ NUEVO: borrar mensaje (solo para el ciudadano)
-  const handleDelete = async (id) => {
+  const handleMarkAsRead = async (message) => {
+    if (!message?.id || !message.isUnread || readingId === message.id) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    setReadingId(message.id);
+
+    try {
+      await axios.patch(
+        `${API_URL}/my-notifications/${message.id}/`,
+        { estado: "leida" },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 15000,
+        }
+      );
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === message.id
+            ? { ...m, estado: "leida", isUnread: false }
+            : m
+        )
+      );
+
+      window.dispatchEvent(new Event("notifications-updated"));
+    } catch (error) {
+      console.error("Error al marcar mensaje como leído:", error);
+      alert("No se pudo marcar el mensaje como leído.");
+    } finally {
+      setReadingId(null);
+    }
+  };
+
+  const handleDelete = async (id, event) => {
+    event.stopPropagation();
+
     const token = localStorage.getItem("token");
     if (!token) return;
 
@@ -68,8 +110,8 @@ const MessagesView = () => {
         timeout: 15000,
       });
 
-      // ✅ reflejar inmediato sin esperar recarga
       setMessages((prev) => prev.filter((m) => m.id !== id));
+      window.dispatchEvent(new Event("notifications-updated"));
     } catch (error) {
       console.error("Error al eliminar mensaje:", error);
 
@@ -100,19 +142,44 @@ const MessagesView = () => {
             <p className="no-messages">No hay mensajes nuevos.</p>
           ) : (
             messages.map((message) => (
-              <div key={message.id} className="message-card">
+              <div
+                key={message.id}
+                className="message-card"
+                onClick={() => handleMarkAsRead(message)}
+                style={{
+                  cursor: message.isUnread ? "pointer" : "default",
+                  borderLeft: message.isUnread ? "6px solid #d90429" : "6px solid #1f4173",
+                  background: message.isUnread ? "#fff7f7" : "#ffffff",
+                }}
+                title={message.isUnread ? "Clic para marcar como leído" : "Mensaje leído"}
+              >
                 <div className="message-header">
-                  <h3>{message.title}</h3>
+                  <h3>
+                    {message.title}
+                    {message.isUnread && (
+                      <span
+                        style={{
+                          marginLeft: "10px",
+                          background: "#d90429",
+                          color: "white",
+                          fontSize: "12px",
+                          padding: "3px 8px",
+                          borderRadius: "20px",
+                        }}
+                      >
+                        Nuevo
+                      </span>
+                    )}
+                  </h3>
                   <span className="message-date">{message.date}</span>
                 </div>
 
                 <p className="message-body">{message.body}</p>
                 <p className="message-sender">— {message.sender}</p>
 
-                {/* ✅ BOTÓN ELIMINAR */}
                 <button
                   type="button"
-                  onClick={() => handleDelete(message.id)}
+                  onClick={(event) => handleDelete(message.id, event)}
                   disabled={deletingId === message.id}
                   style={{
                     marginTop: "10px",
