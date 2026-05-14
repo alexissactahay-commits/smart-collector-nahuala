@@ -18,7 +18,12 @@ const Users = () => {
     try {
       const res = await api.get('/api/admin/users/');
 
-      setUsers(Array.isArray(res.data) ? res.data : []);
+      const data = Array.isArray(res.data)
+        ? res.data
+        : [];
+
+      setUsers(data);
+
     } catch (err) {
       console.error('Error al cargar usuarios:', err);
 
@@ -35,7 +40,7 @@ const Users = () => {
   }, [navigate]);
 
   // =========================
-  // VALIDAR LOGIN
+  // VERIFICAR LOGIN
   // =========================
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -50,19 +55,25 @@ const Users = () => {
   }, [navigate, fetchUsers]);
 
   // =========================
-  // ACTUALIZAR ROL
+  // CAMBIAR ROL
   // =========================
   const updateRole = async (userId, newRole) => {
     try {
-      await api.patch('/api/admin/users/', {
+
+      // ✅ USAR POST
+      await api.post('/api/admin/users/', {
         id: userId,
         role: newRole,
       });
 
+      // actualizar estado local
       setUsers((prev) =>
         prev.map((user) =>
           user.id === userId
-            ? { ...user, role: newRole }
+            ? {
+                ...user,
+                role: newRole,
+              }
             : user
         )
       );
@@ -91,15 +102,21 @@ const Users = () => {
   // =========================
   const toggleActive = async (userId, isActive) => {
     try {
-      await api.patch('/api/admin/users/', {
+
+      // ✅ USAR POST
+      await api.post('/api/admin/users/', {
         id: userId,
         is_active: !isActive,
       });
 
+      // actualizar estado local
       setUsers((prev) =>
         prev.map((user) =>
           user.id === userId
-            ? { ...user, is_active: !isActive }
+            ? {
+                ...user,
+                is_active: !isActive,
+              }
             : user
         )
       );
@@ -143,6 +160,7 @@ const Users = () => {
   // =========================
   return (
     <div className="users-container">
+
       <h1>Lista de Usuarios - Smart Collector</h1>
 
       {message && (
@@ -152,6 +170,7 @@ const Users = () => {
       )}
 
       <table className="users-table">
+
         <thead>
           <tr>
             <th>Usuario</th>
@@ -163,6 +182,7 @@ const Users = () => {
         </thead>
 
         <tbody>
+
           {users.length === 0 ? (
             <tr>
               <td
@@ -173,8 +193,11 @@ const Users = () => {
               </td>
             </tr>
           ) : (
+
             users.map((user) => (
+
               <tr key={user.id}>
+
                 <td>{user.username}</td>
 
                 <td>{user.email}</td>
@@ -192,6 +215,8 @@ const Users = () => {
                 </td>
 
                 <td>
+
+                  {/* CAMBIAR ROL */}
                   {user.role === 'ciudadano' ? (
                     <button
                       onClick={() =>
@@ -210,6 +235,7 @@ const Users = () => {
                     </button>
                   )}
 
+                  {/* ACTIVAR / DESACTIVAR */}
                   <button
                     onClick={() =>
                       toggleActive(
@@ -227,12 +253,19 @@ const Users = () => {
                       ? 'Desactivar'
                       : 'Activar'}
                   </button>
+
                 </td>
+
               </tr>
+
             ))
+
           )}
+
         </tbody>
+
       </table>
+
     </div>
   );
 };
