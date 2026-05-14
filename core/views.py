@@ -341,11 +341,67 @@ def vehicle_update(request, vehicle_id):
 #   ADMIN – USUARIOS Y REPORTES
 # ====================================
 
-@api_view(["GET"])
+@api_view(["GET", "POST", "PUT", "PATCH"])
 @permission_classes([IsAdminUser])
 def admin_users_view(request):
-    users = User.objects.all().values("id", "username", "email", "role", "is_active")
-    return Response(list(users))
+
+    if request.method == "GET":
+        usuarios = User.objects.all().order_by("id")
+
+        data = []
+        for u in usuarios:
+            role_value = "admin" if u.role == "admin" or u.is_staff or u.is_superuser else "ciudadano"
+
+            data.append({
+                "id": u.id,
+                "username": u.username,
+                "email": u.email,
+                "role": role_value,
+                "is_active": u.is_active,
+            })
+
+        return Response(data, status=200)
+
+    user_id = request.data.get("id")
+    new_role = request.data.get("role", None)
+    new_active = request.data.get("is_active", None)
+
+    if not user_id:
+        return Response({"error": "El id del usuario es obligatorio."}, status=400)
+
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({"error": "Usuario no encontrado."}, status=404)
+
+    if new_role is not None:
+        if new_role not in ["admin", "ciudadano"]:
+            return Response({"error": "Rol inválido."}, status=400)
+
+        user.role = new_role
+
+        if new_role == "admin":
+            user.is_staff = True
+            user.is_superuser = True
+        else:
+            user.is_staff = False
+            user.is_superuser = False
+
+    if new_active is not None:
+        user.is_active = bool(new_active)
+
+    user.save()
+
+    role_value = "admin" if user.role == "admin" or user.is_staff or user.is_superuser else "ciudadano"
+
+    return Response({
+        "message": "Usuario actualizado correctamente.",
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "role": role_value,
+        "is_active": user.is_active,
+    }, status=200)
 
 
 @api_view(["GET"])
