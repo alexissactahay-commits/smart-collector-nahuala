@@ -90,13 +90,24 @@ const Users = () => {
   // =========================
   // BOTÓN REGRESAR
   // =========================
-  <button
-  id="users-return-button"
-  type="button"
-  onClick={() => navigate('/admin-dashboard')}
+  <div style={{ textAlign: "left", marginBottom: "10px" }}>
+  <span
+    onClick={() => navigate("/admin-dashboard")}
+    style={{
+      display: "inline-block",
+      background: "#2f6fd0",
+      color: "white",
+      padding: "8px 14px",
+      borderRadius: "4px",
+      fontSize: "13px",
+      fontWeight: "700",
+      cursor: "pointer",
+      width: "auto",
+    }}
   >
-  ← Regresar
-  </button>
+    ← Regresar
+  </span>
+  </div>
 
   // =========================
   // CAMBIAR ROL
@@ -204,14 +215,6 @@ const Users = () => {
   // =========================
   return (
     <div className="users-container">
-
-{/* ✅ BOTÓN REGRESAR */}
-<button
-  className="back-button"
-  onClick={handleBack}
->
-  ← Regresar
-</button>
 
       <h1>Lista de Usuarios - Smart Collector</h1>
 
