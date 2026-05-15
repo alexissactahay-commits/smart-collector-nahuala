@@ -1096,23 +1096,177 @@ class PDFRenderer(BaseRenderer):
 def generate_reports_pdf_view(request):
     reports = Report.objects.select_related("user").order_by("-fecha")
 
+    # ================================
+    # FILTRO OPCIONAL POR FECHAS
+    # ================================
+    start_date = request.query_params.get("start_date")
+    end_date = request.query_params.get("end_date")
+
+    if start_date:
+        reports = reports.filter(fecha__date__gte=start_date)
+
+    if end_date:
+        reports = reports.filter(fecha__date__lte=end_date)
+
+    # ================================
+    # RESUMEN PARA ANÁLISIS
+    # ================================
+    total_reports = reports.count()
+    resolved_reports = reports.filter(status="resolved").count()
+    pending_reports = reports.filter(status="pending").count()
+    unresolved_reports = reports.filter(status="unresolved").count()
+    not_solved_reports = pending_reports + unresolved_reports
+
     buffer = BytesIO()
     p = canvas.Canvas(buffer)
 
-    p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, 800, "Reporte General – Smart Collector")
+    width, height = p._pagesize
+
+    # ================================
+    # ENCABEZADO
+    # ================================
+    p.setFont("Helvetica-Bold", 18)
+    p.drawString(50, 800, "Reporte General - Smart Collector")
+
     p.setFont("Helvetica", 10)
+    generated_at = timezone.localtime(timezone.now()).strftime("%d/%m/%Y %H:%M")
+    p.drawString(50, 778, f"Fecha de generación: {generated_at}")
 
-    y = 770
-    for r in reports:
-        text = f"{r.fecha} — {r.user.username}: {r.detalle[:60]}..."
-        p.drawString(50, y, text)
-        y -= 20
+    if start_date or end_date:
+        p.drawString(
+            50,
+            760,
+            f"Rango de fechas: {start_date or 'Inicio'} al {end_date or 'Final'}",
+        )
 
-        if y < 50:
-            p.showPage()
+    # ================================
+    # TABLA DE RESUMEN
+    # ================================
+    table_x = 50
+    table_y = 720
+    col1_width = 330
+    col2_width = 130
+    row_height = 28
+
+    summary_rows = [
+        ("Indicador", "Total"),
+        ("Reportes recibidos", total_reports),
+        ("Reportes solucionados", resolved_reports),
+        ("Reportes pendientes", pending_reports),
+        ("Reportes no resueltos", unresolved_reports),
+        ("Total de reportes no solucionados", not_solved_reports),
+    ]
+
+    for index, (label, value) in enumerate(summary_rows):
+        y = table_y - (index * row_height)
+
+        if index == 0:
+            p.setFillColorRGB(0.06, 0.16, 0.27)
+            p.rect(table_x, y - row_height, col1_width + col2_width, row_height, fill=1)
+            p.setFillColorRGB(1, 1, 1)
+            p.setFont("Helvetica-Bold", 11)
+        else:
+            p.setFillColorRGB(0.96, 0.96, 0.96)
+            p.rect(table_x, y - row_height, col1_width + col2_width, row_height, fill=1)
+            p.setFillColorRGB(0, 0, 0)
             p.setFont("Helvetica", 10)
+
+        # Bordes
+        p.setStrokeColorRGB(0.55, 0.55, 0.55)
+        p.rect(table_x, y - row_height, col1_width, row_height, fill=0)
+        p.rect(table_x + col1_width, y - row_height, col2_width, row_height, fill=0)
+
+        # Texto
+        p.drawString(table_x + 10, y - 18, str(label))
+        p.drawCentredString(table_x + col1_width + (col2_width / 2), y - 18, str(value))
+
+    # ================================
+    # NOTA DE ANÁLISIS
+    # ================================
+    y_after_table = table_y - (len(summary_rows) * row_height) - 35
+
+    p.setFillColorRGB(0, 0, 0)
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(50, y_after_table, "Análisis general")
+
+    p.setFont("Helvetica", 10)
+    y_after_table -= 18
+
+    if total_reports > 0:
+        solved_percent = round((resolved_reports / total_reports) * 100, 2)
+        not_solved_percent = round((not_solved_reports / total_reports) * 100, 2)
+    else:
+        solved_percent = 0
+        not_solved_percent = 0
+
+    analysis_lines = [
+        f"Porcentaje de reportes solucionados: {solved_percent}%",
+        f"Porcentaje de reportes no solucionados: {not_solved_percent}%",
+        "Este resumen permite evaluar el estado general de atención a reportes ciudadanos.",
+    ]
+
+    for line in analysis_lines:
+        p.drawString(50, y_after_table, line)
+        y_after_table -= 16
+
+    # ================================
+    # DETALLE DE REPORTES
+    # ================================
+    y = y_after_table - 20
+
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(50, y, "Detalle de reportes registrados")
+    y -= 22
+
+    p.setFont("Helvetica-Bold", 9)
+    p.drawString(50, y, "Fecha")
+    p.drawString(150, y, "Usuario")
+    p.drawString(260, y, "Estado")
+    p.drawString(350, y, "Detalle")
+    y -= 10
+
+    p.line(50, y, 560, y)
+    y -= 15
+
+    p.setFont("Helvetica", 8)
+
+    for r in reports:
+        if y < 60:
+            p.showPage()
             y = 800
+
+            p.setFont("Helvetica-Bold", 12)
+            p.drawString(50, y, "Detalle de reportes registrados")
+            y -= 22
+
+            p.setFont("Helvetica-Bold", 9)
+            p.drawString(50, y, "Fecha")
+            p.drawString(150, y, "Usuario")
+            p.drawString(260, y, "Estado")
+            p.drawString(350, y, "Detalle")
+            y -= 10
+
+            p.line(50, y, 560, y)
+            y -= 15
+            p.setFont("Helvetica", 8)
+
+        fecha = timezone.localtime(r.fecha).strftime("%d/%m/%Y") if r.fecha else "N/A"
+        usuario = r.user.username if r.user else "Desconocido"
+        estado_map = {
+            "pending": "Pendiente",
+            "resolved": "Resuelto",
+            "unresolved": "No resuelto",
+        }
+        estado = estado_map.get(r.status, r.status or "N/A")
+        detalle = (r.detalle or "").replace("\n", " ").strip()
+        if len(detalle) > 45:
+            detalle = detalle[:45] + "..."
+
+        p.drawString(50, y, fecha)
+        p.drawString(150, y, usuario[:18])
+        p.drawString(260, y, estado[:18])
+        p.drawString(350, y, detalle)
+        y -= 16
 
     p.save()
     buffer.seek(0)
