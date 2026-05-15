@@ -10,6 +10,9 @@ const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const handleBack = () => {
+  navigate('/admin-dashboard');
+};
 
   // =========================
   // CARGAR USUARIOS
@@ -59,9 +62,9 @@ const Users = () => {
   // =========================
   <div className="users-back-row">
   <button
+    id="btn-regresar-users"
     type="button"
-    className="btn-back-users"
-    onClick={() => navigate('/admin-dashboard')}
+    onClick={handleBack}
   >
     ← Regresar
   </button>
