@@ -65,7 +65,6 @@ const AdminReportsView = () => {
 
   return (
     <div className="reports-admin-container">
-
       {/* Botón regresar */}
       <button
         id="admin-reports-small-back-button"
@@ -118,7 +117,6 @@ const AdminReportsView = () => {
 
               {/* Acciones */}
               <div className="actions-row">
-
                 <button
                   onClick={() => updateStatus(report.id, "resolved")}
                   className="btn-success"
@@ -139,7 +137,6 @@ const AdminReportsView = () => {
                 >
                   Pendiente
                 </button>
-
               </div>
             </div>
           ))
