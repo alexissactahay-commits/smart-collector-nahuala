@@ -1,8 +1,12 @@
+// AdminRouteCommunities.js
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./AdminRouteCommunities.css";
 
 const AdminRouteCommunities = () => {
+  const navigate = useNavigate();
+
   // ================================
   // NORMALIZAR API_URL
   // ================================
@@ -59,15 +63,25 @@ const AdminRouteCommunities = () => {
       } catch (err) {
         console.error(err);
         const status = err.response?.status;
+
         if (status === 401 || status === 403) {
           localStorage.removeItem("token");
           localStorage.removeItem("userRole");
           localStorage.removeItem("username");
-          showAlert("Sesión expirada o sin permisos. Inicia sesión de nuevo.", "error");
+
+          showAlert(
+            "Sesión expirada o sin permisos. Inicia sesión de nuevo.",
+            "error"
+          );
+
           window.location.href = "/login";
           return;
         }
-        showAlert("No se pudo cargar datos. Verifica el servidor.", "error");
+
+        showAlert(
+          "No se pudo cargar datos. Verifica el servidor.",
+          "error"
+        );
       } finally {
         setLoading(false);
       }
@@ -84,20 +98,26 @@ const AdminRouteCommunities = () => {
       setAssigned([]);
       return;
     }
+
     try {
       const res = await axios.get(
         `${API_URL}/admin/route-communities/?route_id=${routeId}`,
         authHeaders
       );
+
       setAssigned(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error(err);
-      showAlert("No se pudo cargar comunidades asignadas.", "error");
+      showAlert(
+        "No se pudo cargar comunidades asignadas.",
+        "error"
+      );
     }
   };
 
   useEffect(() => {
     fetchAssigned(selectedRouteId);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRouteId]);
 
@@ -106,35 +126,63 @@ const AdminRouteCommunities = () => {
   // ----------------------------
   const createCommunity = async () => {
     const name = String(newCommunityName || "").trim();
+
     if (!name) {
-      showAlert("Escribe el nombre de la comunidad.", "error");
+      showAlert(
+        "Escribe el nombre de la comunidad.",
+        "error"
+      );
       return;
     }
+
     try {
       const res = await axios.post(
         `${API_URL}/admin/communities/`,
         { name },
         authHeaders
       );
-      setCommunities((prev) => [res.data, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
+
+      setCommunities((prev) =>
+        [res.data, ...prev].sort((a, b) =>
+          a.name.localeCompare(b.name)
+        )
+      );
+
       setNewCommunityName("");
+
       showAlert("Comunidad creada.", "success");
+
     } catch (err) {
       console.error(err);
-      showAlert(err.response?.data?.error || "No se pudo crear la comunidad.", "error");
+
+      showAlert(
+        err.response?.data?.error ||
+          "No se pudo crear la comunidad.",
+        "error"
+      );
     }
   };
 
   // ----------------------------
-  // Editar comunidad (prompt simple)
+  // Editar comunidad
   // ----------------------------
   const editCommunity = async (community) => {
     const current = community?.name || "";
-    const name = window.prompt("Nuevo nombre de la comunidad:", current);
-    if (name === null) return; // cancel
+
+    const name = window.prompt(
+      "Nuevo nombre de la comunidad:",
+      current
+    );
+
+    if (name === null) return;
+
     const trimmed = String(name).trim();
+
     if (!trimmed) {
-      showAlert("El nombre no puede ir vacío.", "error");
+      showAlert(
+        "El nombre no puede ir vacío.",
+        "error"
+      );
       return;
     }
 
@@ -147,17 +195,29 @@ const AdminRouteCommunities = () => {
 
       setCommunities((prev) =>
         prev
-          .map((c) => (c.id === community.id ? res.data : c))
-          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((c) =>
+            c.id === community.id ? res.data : c
+          )
+          .sort((a, b) =>
+            a.name.localeCompare(b.name)
+          )
       );
 
-      // si la comunidad estaba asignada, se verá actualizada al recargar
       await fetchAssigned(selectedRouteId);
 
-      showAlert("Comunidad actualizada.", "success");
+      showAlert(
+        "Comunidad actualizada.",
+        "success"
+      );
+
     } catch (err) {
       console.error(err);
-      showAlert(err.response?.data?.error || "No se pudo actualizar.", "error");
+
+      showAlert(
+        err.response?.data?.error ||
+          "No se pudo actualizar.",
+        "error"
+      );
     }
   };
 
@@ -168,16 +228,33 @@ const AdminRouteCommunities = () => {
     const ok = window.confirm(
       `¿Eliminar la comunidad "${community.name}"?\n\nEsto también quitará sus asignaciones a rutas.`
     );
+
     if (!ok) return;
 
     try {
-      await axios.delete(`${API_URL}/admin/communities/${community.id}/`, authHeaders);
-      setCommunities((prev) => prev.filter((c) => c.id !== community.id));
+      await axios.delete(
+        `${API_URL}/admin/communities/${community.id}/`,
+        authHeaders
+      );
+
+      setCommunities((prev) =>
+        prev.filter((c) => c.id !== community.id)
+      );
+
       await fetchAssigned(selectedRouteId);
-      showAlert("Comunidad eliminada.", "success");
+
+      showAlert(
+        "Comunidad eliminada.",
+        "success"
+      );
+
     } catch (err) {
       console.error(err);
-      showAlert("No se pudo eliminar la comunidad.", "error");
+
+      showAlert(
+        "No se pudo eliminar la comunidad.",
+        "error"
+      );
     }
   };
 
@@ -186,29 +263,49 @@ const AdminRouteCommunities = () => {
   // ----------------------------
   const assignCommunity = async (communityId) => {
     if (!selectedRouteId) {
-      showAlert("Selecciona una ruta primero.", "error");
+      showAlert(
+        "Selecciona una ruta primero.",
+        "error"
+      );
       return;
     }
 
     try {
       await axios.post(
         `${API_URL}/admin/route-communities/`,
-        { route_id: selectedRouteId, community_id: communityId },
+        {
+          route_id: selectedRouteId,
+          community_id: communityId,
+        },
         authHeaders
       );
+
       await fetchAssigned(selectedRouteId);
-      showAlert("Comunidad asignada a la ruta.", "success");
+
+      showAlert(
+        "Comunidad asignada a la ruta.",
+        "success"
+      );
+
     } catch (err) {
       console.error(err);
-      showAlert(err.response?.data?.error || "No se pudo asignar.", "error");
+
+      showAlert(
+        err.response?.data?.error ||
+          "No se pudo asignar.",
+        "error"
+      );
     }
   };
 
   // ----------------------------
-  // Quitar comunidad de ruta (borra RouteCommunity)
+  // Quitar comunidad de ruta
   // ----------------------------
   const unassign = async (routeCommunityId) => {
-    const ok = window.confirm("¿Quitar esta comunidad de la ruta?");
+    const ok = window.confirm(
+      "¿Quitar esta comunidad de la ruta?"
+    );
+
     if (!ok) return;
 
     try {
@@ -216,26 +313,55 @@ const AdminRouteCommunities = () => {
         `${API_URL}/admin/route-communities/${routeCommunityId}/`,
         authHeaders
       );
+
       await fetchAssigned(selectedRouteId);
-      showAlert("Comunidad quitada de la ruta.", "success");
+
+      showAlert(
+        "Comunidad quitada de la ruta.",
+        "success"
+      );
+
     } catch (err) {
       console.error(err);
-      showAlert("No se pudo quitar la comunidad.", "error");
+
+      showAlert(
+        "No se pudo quitar la comunidad.",
+        "error"
+      );
     }
   };
 
   const assignedCommunityIds = useMemo(
-    () => new Set((assigned || []).map((x) => x?.community?.id)),
+    () =>
+      new Set(
+        (assigned || []).map((x) => x?.community?.id)
+      ),
     [assigned]
   );
 
   if (loading) {
-    return <div className="arc-container">Cargando...</div>;
+    return (
+      <div className="arc-container">
+        Cargando...
+      </div>
+    );
   }
 
   return (
     <div className="arc-container">
-      <h2>Admin — Lista de Comunidades por Ruta</h2>
+
+      {/* BOTÓN REGRESAR */}
+      <button
+        id="admin-route-communities-small-back-button"
+        type="button"
+        onClick={() => navigate("/admin-dashboard")}
+      >
+        ← Regresar
+      </button>
+
+      <h2>
+        Admin — Lista de Comunidades por Ruta
+      </h2>
 
       {alert.message && (
         <div className={`arc-alert ${alert.type}`}>
@@ -246,12 +372,18 @@ const AdminRouteCommunities = () => {
       {/* Selector de Ruta */}
       <div className="arc-card">
         <h3>1) Selecciona una Ruta</h3>
+
         <select
           className="arc-select"
           value={selectedRouteId}
-          onChange={(e) => setSelectedRouteId(e.target.value)}
+          onChange={(e) =>
+            setSelectedRouteId(e.target.value)
+          }
         >
-          <option value="">— Selecciona una ruta —</option>
+          <option value="">
+            — Selecciona una ruta —
+          </option>
+
           {routes.map((r) => (
             <option key={r.id} value={r.id}>
               {r.name}
@@ -262,18 +394,35 @@ const AdminRouteCommunities = () => {
 
       {/* Comunidades asignadas */}
       <div className="arc-card">
-        <h3>2) Comunidades asignadas a la ruta</h3>
+        <h3>
+          2) Comunidades asignadas a la ruta
+        </h3>
 
         {!selectedRouteId ? (
-          <p className="arc-muted">Selecciona una ruta para ver sus comunidades.</p>
+          <p className="arc-muted">
+            Selecciona una ruta para ver sus
+            comunidades.
+          </p>
         ) : assigned.length === 0 ? (
-          <p className="arc-muted">No hay comunidades asignadas aún.</p>
+          <p className="arc-muted">
+            No hay comunidades asignadas aún.
+          </p>
         ) : (
           <ul className="arc-list">
             {assigned.map((rc) => (
-              <li key={rc.id} className="arc-list-item">
-                <span>{rc.community?.name || "Comunidad"}</span>
-                <button className="arc-btn danger" onClick={() => unassign(rc.id)}>
+              <li
+                key={rc.id}
+                className="arc-list-item"
+              >
+                <span>
+                  {rc.community?.name ||
+                    "Comunidad"}
+                </span>
+
+                <button
+                  className="arc-btn danger"
+                  onClick={() => unassign(rc.id)}
+                >
                   Quitar
                 </button>
               </li>
@@ -285,19 +434,28 @@ const AdminRouteCommunities = () => {
       {/* Crear comunidad */}
       <div className="arc-card">
         <h3>3) Crear comunidad</h3>
+
         <div className="arc-row">
           <input
             className="arc-input"
             value={newCommunityName}
-            onChange={(e) => setNewCommunityName(e.target.value)}
+            onChange={(e) =>
+              setNewCommunityName(e.target.value)
+            }
             placeholder="Ej: Xejuyup, Panaj, Xecaracoj..."
           />
-          <button className="arc-btn" onClick={createCommunity}>
+
+          <button
+            className="arc-btn"
+            onClick={createCommunity}
+          >
             Agregar
           </button>
         </div>
+
         <p className="arc-muted">
-          Crea comunidades en el catálogo y luego asígnalas a la ruta seleccionada.
+          Crea comunidades en el catálogo y luego
+          asígnalas a la ruta seleccionada.
         </p>
       </div>
 
@@ -306,27 +464,51 @@ const AdminRouteCommunities = () => {
         <h3>4) Catálogo de comunidades</h3>
 
         {communities.length === 0 ? (
-          <p className="arc-muted">No hay comunidades creadas aún.</p>
+          <p className="arc-muted">
+            No hay comunidades creadas aún.
+          </p>
         ) : (
           <ul className="arc-list">
             {communities.map((c) => {
-              const alreadyAssigned = assignedCommunityIds.has(c.id);
+              const alreadyAssigned =
+                assignedCommunityIds.has(c.id);
+
               return (
-                <li key={c.id} className="arc-list-item">
+                <li
+                  key={c.id}
+                  className="arc-list-item"
+                >
                   <span>{c.name}</span>
 
                   <div className="arc-actions">
-                    <button className="arc-btn secondary" onClick={() => editCommunity(c)}>
+
+                    <button
+                      className="arc-btn secondary"
+                      onClick={() =>
+                        editCommunity(c)
+                      }
+                    >
                       Editar
                     </button>
-                    <button className="arc-btn danger" onClick={() => deleteCommunity(c)}>
+
+                    <button
+                      className="arc-btn danger"
+                      onClick={() =>
+                        deleteCommunity(c)
+                      }
+                    >
                       Eliminar
                     </button>
 
                     <button
                       className="arc-btn"
-                      disabled={!selectedRouteId || alreadyAssigned}
-                      onClick={() => assignCommunity(c.id)}
+                      disabled={
+                        !selectedRouteId ||
+                        alreadyAssigned
+                      }
+                      onClick={() =>
+                        assignCommunity(c.id)
+                      }
                       title={
                         !selectedRouteId
                           ? "Selecciona una ruta"
@@ -335,8 +517,11 @@ const AdminRouteCommunities = () => {
                           : "Asignar a ruta"
                       }
                     >
-                      {alreadyAssigned ? "Asignada" : "Asignar"}
+                      {alreadyAssigned
+                        ? "Asignada"
+                        : "Asignar"}
                     </button>
+
                   </div>
                 </li>
               );
