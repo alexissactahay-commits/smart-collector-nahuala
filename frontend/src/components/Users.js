@@ -216,6 +216,14 @@ const Users = () => {
   return (
     <div className="users-container">
 
+  {/* ✅ BOTÓN REGRESAR */}
+  <button
+    className="back-button"
+    onClick={handleBack}
+  >
+    ← Regresar
+  </button>
+
       <h1>Lista de Usuarios - Smart Collector</h1>
 
       {message && (
