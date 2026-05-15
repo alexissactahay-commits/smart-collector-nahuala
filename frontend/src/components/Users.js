@@ -60,14 +60,25 @@ const Users = () => {
   // =========================
   // BOTÓN REGRESAR
   // =========================
-  <div className="users-back-row">
-  <button
-    type="button"
-    className="btn-back-users"
-    onClick={() => navigate('/admin-dashboard')}
+  <div
+  onClick={() => navigate('/admin-dashboard')}
+  style={{
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '110px',
+    height: '34px',
+    backgroundColor: '#2f6fd0',
+    color: '#fff',
+    borderRadius: '4px',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    marginBottom: '10px',
+    userSelect: 'none'
+  }}
   >
-    ← Regresar
-  </button>
+  ← Regresar
   </div>
 
   // =========================
