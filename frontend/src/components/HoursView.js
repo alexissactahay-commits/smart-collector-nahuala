@@ -1,42 +1,48 @@
+// HoursView.js
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./HoursView.css";
 
 const normalizeApiBase = () => {
   let base = process.env.REACT_APP_API_URL || "http://localhost:8000";
   base = base.replace(/\/+$/, "");
-  if (!base.endsWith("/api")) base = `${base}/api`;
+
+  if (!base.endsWith("/api")) {
+    base = `${base}/api`;
+  }
+
   return base;
 };
 
 const API = normalizeApiBase();
 
 const buildURL = (endpoint) => {
-  if (!endpoint.startsWith("/")) endpoint = "/" + endpoint;
+  if (!endpoint.startsWith("/")) {
+    endpoint = "/" + endpoint;
+  }
+
   return API + endpoint;
 };
 
-// ✅ NUEVO: normaliza claves de día (quita tildes, espacios, etc.)
+// ✅ Normaliza claves de día
 const normalizeDayKey = (key) => {
   if (key === undefined || key === null) return null;
 
-  // Si viene number (0-6)
   if (typeof key === "number" && Number.isFinite(key)) return key;
 
   const s0 = String(key).trim();
   if (!s0) return null;
 
-  // Si viene string numérica "0-6"
   if (/^\d+$/.test(s0)) {
     const n = Number(s0);
     if (Number.isFinite(n)) return n;
   }
 
-  // Quitar tildes y normalizar
   const s = s0
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // quita acentos
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/\./g, "")
     .trim();
 
@@ -47,8 +53,8 @@ const normalizeDayKey = (key) => {
     martes: "martes",
     wednesday: "miercoles",
     miercoles: "miercoles",
-    jueves: "jueves",
     thursday: "jueves",
+    jueves: "jueves",
     friday: "viernes",
     viernes: "viernes",
     saturday: "sabado",
@@ -57,13 +63,21 @@ const normalizeDayKey = (key) => {
     domingo: "domingo",
   };
 
-  return alias[s] || s; // si viene raro, al menos lo dejamos consistente
+  return alias[s] || s;
 };
 
 const dayLabelFromKey = (key) => {
-  // Acepta números o strings ya normalizados
   if (typeof key === "number") {
-    const mapNum = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+    const mapNum = [
+      "Lunes",
+      "Martes",
+      "Miércoles",
+      "Jueves",
+      "Viernes",
+      "Sábado",
+      "Domingo",
+    ];
+
     return mapNum[key] || "Día";
   }
 
@@ -96,10 +110,13 @@ const sortDayKey = (key) => {
   };
 
   const s = String(key ?? "").toLowerCase();
+
   return order[s] ?? 99;
 };
 
 const HoursView = () => {
+  const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
   const [schedules, setSchedules] = useState([]);
   const [error, setError] = useState("");
@@ -118,7 +135,9 @@ const HoursView = () => {
         }
 
         const res = await axios.get(buildURL("/citizen/route-schedules/"), {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         setSchedules(Array.isArray(res.data) ? res.data : []);
@@ -134,13 +153,14 @@ const HoursView = () => {
     loadSchedules();
   }, [token]);
 
-  // ✅ Agrupar horarios por día (normalizado)
+  // ✅ Agrupar horarios por día
   const groupedByDay = useMemo(() => {
     const map = new Map();
 
     (Array.isArray(schedules) ? schedules : []).forEach((s) => {
       const rawDayKey = s?.day_of_week;
       const dayKey = normalizeDayKey(rawDayKey);
+
       if (dayKey === null) return;
 
       const start = s?.start_time || "--:--";
@@ -154,17 +174,21 @@ const HoursView = () => {
         routeName,
       };
 
-      if (!map.has(dayKey)) map.set(dayKey, []);
+      if (!map.has(dayKey)) {
+        map.set(dayKey, []);
+      }
+
       map.get(dayKey).push(item);
     });
 
-    // ordenar dentro de cada día por start_time
     for (const [k, arr] of map.entries()) {
-      arr.sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
+      arr.sort((a, b) =>
+        String(a.start_time).localeCompare(String(b.start_time))
+      );
+
       map.set(k, arr);
     }
 
-    // devolver como array ordenado por día
     return Array.from(map.entries())
       .map(([dayKey, items]) => ({
         dayKey,
@@ -174,7 +198,7 @@ const HoursView = () => {
       .sort((a, b) => sortDayKey(a.dayKey) - sortDayKey(b.dayKey));
   }, [schedules]);
 
-  // Mostrar al menos Lunes-Viernes aunque no haya data (cuando backend devuelve texto)
+  // Mostrar al menos Lunes-Viernes aunque no haya data
   const baseDays = useMemo(
     () => [
       { dayKey: "lunes", dayName: "Lunes" },
@@ -187,25 +211,49 @@ const HoursView = () => {
   );
 
   const viewDays = useMemo(() => {
-    const anyNumeric = groupedByDay.some((d) => typeof d.dayKey === "number");
+    const anyNumeric = groupedByDay.some(
+      (d) => typeof d.dayKey === "number"
+    );
+
     if (anyNumeric) {
-      // Si el backend devuelve números 0-6, mostramos lo que venga
       return groupedByDay;
     }
 
-    // Backend texto: aseguramos L-V
-    const map = new Map(groupedByDay.map((d) => [String(d.dayKey).toLowerCase(), d]));
+    const map = new Map(
+      groupedByDay.map((d) => [String(d.dayKey).toLowerCase(), d])
+    );
+
     return baseDays.map((d) => map.get(d.dayKey) || { ...d, items: [] });
   }, [groupedByDay, baseDays]);
 
   return (
     <div className="hours-container">
+
+      {/* Botón regresar */}
+      <button
+        id="hours-small-back-button"
+        type="button"
+        onClick={() => navigate("/user-dashboard")}
+      >
+        ← Regresar
+      </button>
+
       <h2>Horarios de Recolección - Nahualá</h2>
 
-      {loading && <p style={{ textAlign: "center" }}>Cargando horarios...</p>}
+      {loading && (
+        <p style={{ textAlign: "center" }}>
+          Cargando horarios...
+        </p>
+      )}
 
       {!loading && error && (
-        <p style={{ textAlign: "center", color: "#b00020", fontWeight: 600 }}>
+        <p
+          style={{
+            textAlign: "center",
+            color: "#b00020",
+            fontWeight: 600,
+          }}
+        >
           {error}
         </p>
       )}
@@ -223,14 +271,22 @@ const HoursView = () => {
                       <div style={{ fontWeight: 700 }}>
                         {it.start_time} - {it.end_time}
                       </div>
-                      <div style={{ fontSize: 13, color: "#2e7d32" }}>
+
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#2e7d32",
+                        }}
+                      >
                         {it.routeName}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="hour-time">No hay recolección este día</p>
+                <p className="hour-time">
+                  No hay recolección este día
+                </p>
               )}
             </div>
           ))}
