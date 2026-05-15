@@ -1,5 +1,6 @@
 // ForgotPassword.js
 import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./ForgotPassword.css";
 
@@ -11,6 +12,8 @@ const normalizeApiBase = () => {
 };
 
 const ForgotPassword = () => {
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -41,11 +44,14 @@ const ForgotPassword = () => {
       const status = err?.response?.status;
       const data = err?.response?.data;
 
-      // ✅ Mostrar algo útil
       if (status) {
         setError(
           `No se pudo enviar el correo. Status: ${status}\n` +
-            `Respuesta: ${typeof data === "string" ? data : JSON.stringify(data || {}, null, 2)}`
+            `Respuesta: ${
+              typeof data === "string"
+                ? data
+                : JSON.stringify(data || {}, null, 2)
+            }`
         );
       } else {
         setError("Error al enviar el correo. Por favor, inténtelo nuevamente.");
@@ -57,8 +63,20 @@ const ForgotPassword = () => {
 
   return (
     <div className="forgot-password-container">
+      {/* Botón regresar */}
+      <button
+        id="forgot-password-small-back-button"
+        type="button"
+        onClick={() => navigate("/login")}
+      >
+        ← Regresar
+      </button>
+
       <h2>¿Olvidó su Contraseña?</h2>
-      <p>Ingresa tu correo y te enviaremos un enlace para restablecerla.</p>
+
+      <p>
+        Ingresa tu correo y te enviaremos un enlace para restablecerla.
+      </p>
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
@@ -79,7 +97,12 @@ const ForgotPassword = () => {
       </form>
 
       {message && <div className="success-message">{message}</div>}
-      {error && <div className="error-message" style={{ whiteSpace: "pre-wrap" }}>{error}</div>}
+
+      {error && (
+        <div className="error-message" style={{ whiteSpace: "pre-wrap" }}>
+          {error}
+        </div>
+      )}
     </div>
   );
 };
