@@ -1,5 +1,6 @@
 // MapsView.js
 import React, { useEffect, useState, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -18,7 +19,6 @@ const buildURL = (endpoint) => {
   return API + ep;
 };
 
-// ✅ token robusto (por si guardas token o access)
 const getToken = () => {
   return localStorage.getItem("token") || localStorage.getItem("access") || "";
 };
@@ -78,20 +78,22 @@ const useGoogleMaps = (apiKey) => {
 };
 
 const MapView = () => {
+  const navigate = useNavigate();
   const mapRef = useRef(null);
 
-  // ✅ CAMBIO 1: Centro por defecto en NAHUALÁ (ajusta si quieres)
   const DEFAULT_CENTER = useMemo(() => ({ lat: 14.845, lng: -91.318 }), []);
 
-  const [calendarDates, setCalendarDates] = useState([]); // RouteDate
-  const [routesWithPoints, setRoutesWithPoints] = useState([]); // routes con points
-  const [routeSchedules, setRouteSchedules] = useState([]); // horarios
+  const [calendarDates, setCalendarDates] = useState([]);
+  const [routesWithPoints, setRoutesWithPoints] = useState([]);
+  const [routeSchedules, setRouteSchedules] = useState([]);
 
   const [map, setMap] = useState(null);
   const [polylines, setPolylines] = useState([]);
   const [routeMarkers, setRouteMarkers] = useState([]);
 
-  const { mapLoaded, error } = useGoogleMaps(process.env.REACT_APP_GOOGLE_MAPS_API_KEY);
+  const { mapLoaded, error } = useGoogleMaps(
+    process.env.REACT_APP_GOOGLE_MAPS_API_KEY
+  );
 
   const token = getToken();
   const userRole = localStorage.getItem("userRole");
@@ -104,20 +106,26 @@ const MapView = () => {
     return `${y}-${m}-${day}`;
   };
 
-  // ✅ CAMBIO 2: Mostrar día en el selector
   const dayNameFromISO = (iso) => {
     try {
       if (!iso) return "";
       const [y, m, d] = iso.split("-").map(Number);
-      const dt = new Date(y, (m - 1), d);
-      const days = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+      const dt = new Date(y, m - 1, d);
+      const days = [
+        "Domingo",
+        "Lunes",
+        "Martes",
+        "Miércoles",
+        "Jueves",
+        "Viernes",
+        "Sábado",
+      ];
       return days[dt.getDay()] || "";
     } catch {
       return "";
     }
   };
 
-  // ====== Opciones de fechas disponibles ======
   const availableDates = useMemo(() => {
     const arr = Array.isArray(calendarDates) ? calendarDates : [];
     const only = arr.map((x) => x?.date).filter(Boolean);
@@ -133,26 +141,28 @@ const MapView = () => {
       setSelectedDate("");
       return;
     }
+
     const today = todayISO();
+
     if (availableDates.includes(today)) {
       setSelectedDate(today);
     } else {
       const upcoming = availableDates.find((d) => new Date(d) >= new Date(today));
       setSelectedDate(upcoming || availableDates[0]);
     }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [availableDates.length]);
 
-  // ====== IDs de rutas programadas para la fecha seleccionada ======
   const scheduledRouteIds = useMemo(() => {
     if (!selectedDate) return [];
+
     return (Array.isArray(calendarDates) ? calendarDates : [])
       .filter((x) => x?.date === selectedDate)
       .map((x) => x?.route?.id)
       .filter(Boolean);
   }, [calendarDates, selectedDate]);
 
-  // ====== Horarios disponibles para esa fecha ======
   const availableSchedulesForSelectedDate = useMemo(() => {
     if (!selectedDate || !scheduledRouteIds.length) return [];
 
@@ -164,10 +174,15 @@ const MapView = () => {
         route_name: s.route.name,
         start_time: s.start_time,
         end_time: s.end_time,
-        label: `${s.route.name || "Ruta"} — ${s.start_time || "--:--"} a ${s.end_time || "--:--"}`,
+        label: `${s.route.name || "Ruta"} — ${s.start_time || "--:--"} a ${
+          s.end_time || "--:--"
+        }`,
       }));
 
-    schedules.sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)));
+    schedules.sort((a, b) =>
+      String(a.start_time).localeCompare(String(b.start_time))
+    );
+
     return schedules;
   }, [selectedDate, scheduledRouteIds, routeSchedules]);
 
@@ -178,11 +193,13 @@ const MapView = () => {
       setSelectedScheduleId("");
       return;
     }
+
     setSelectedScheduleId(String(availableSchedulesForSelectedDate[0].id));
   }, [availableSchedulesForSelectedDate]);
 
   const selectedSchedule = useMemo(() => {
     if (!selectedScheduleId) return null;
+
     return (
       availableSchedulesForSelectedDate.find(
         (s) => String(s.id) === String(selectedScheduleId)
@@ -192,12 +209,12 @@ const MapView = () => {
 
   const selectedRoute = useMemo(() => {
     if (!selectedSchedule?.route_id) return null;
-    return routesWithPoints.find((r) => r.id === selectedSchedule.route_id) || null;
+
+    return (
+      routesWithPoints.find((r) => r.id === selectedSchedule.route_id) || null
+    );
   }, [routesWithPoints, selectedSchedule]);
 
-  // ----------------------------
-  // Init map
-  // ----------------------------
   useEffect(() => {
     if (!mapLoaded || !mapRef.current) return;
 
@@ -210,9 +227,6 @@ const MapView = () => {
     setMap(newMap);
   }, [mapLoaded, DEFAULT_CENTER]);
 
-  // ----------------------------
-  // Load data
-  // ----------------------------
   useEffect(() => {
     if (!mapLoaded) return;
 
@@ -231,11 +245,16 @@ const MapView = () => {
         const routesRes = await axios.get(buildURL("/routes/"), { headers });
         setRoutesWithPoints(Array.isArray(routesRes.data) ? routesRes.data : []);
 
-        const schRes = await axios.get(buildURL("/citizen/route-schedules/"), { headers });
+        const schRes = await axios.get(buildURL("/citizen/route-schedules/"), {
+          headers,
+        });
         setRouteSchedules(Array.isArray(schRes.data) ? schRes.data : []);
       } catch (err) {
         const status = err?.response?.status;
-        console.error("Error cargando datos de mapa:", err?.response?.data || err.message);
+        console.error(
+          "Error cargando datos de mapa:",
+          err?.response?.data || err.message
+        );
 
         if (status === 401 || status === 403) {
           handleAuthFail();
@@ -246,32 +265,33 @@ const MapView = () => {
     loadData();
   }, [mapLoaded, token]);
 
-  // ----------------------------
-  // Draw route
-  // ----------------------------
   useEffect(() => {
     if (!map || !mapLoaded) return;
 
     polylines.forEach((p) => p.setMap(null));
     routeMarkers.forEach((m) => m.setMap(null));
 
-    // ✅ CAMBIO 1 (parte 2): si NO hay ruta seleccionada -> centrar en NAHUALÁ
     if (!selectedRoute) {
       try {
         map.setCenter(DEFAULT_CENTER);
         map.setZoom(14);
       } catch (_) {}
+
       setPolylines([]);
       setRouteMarkers([]);
       return;
     }
 
-    const pts = Array.isArray(selectedRoute.points) ? [...selectedRoute.points] : [];
+    const pts = Array.isArray(selectedRoute.points)
+      ? [...selectedRoute.points]
+      : [];
+
     if (pts.length < 2) {
       try {
         map.setCenter(DEFAULT_CENTER);
         map.setZoom(14);
       } catch (_) {}
+
       setPolylines([]);
       setRouteMarkers([]);
       return;
@@ -288,6 +308,7 @@ const MapView = () => {
         map.setCenter(DEFAULT_CENTER);
         map.setZoom(14);
       } catch (_) {}
+
       setPolylines([]);
       setRouteMarkers([]);
       return;
@@ -323,27 +344,65 @@ const MapView = () => {
 
     setPolylines([polyline]);
     setRouteMarkers([startMarker, endMarker]);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, mapLoaded, selectedRoute, DEFAULT_CENTER]);
 
   const showNoRouteToday = useMemo(() => {
     const today = todayISO();
+
     if (selectedDate !== today) return false;
+
     return !scheduledRouteIds.length;
   }, [scheduledRouteIds, selectedDate]);
 
-  if (error) return <div style={{ padding: 20 }}>Error cargando mapas: {error}</div>;
-  if (!mapLoaded) return <div style={{ padding: 20 }}>Cargando Google Maps...</div>;
+  if (error) {
+    return <div style={{ padding: 20 }}>Error cargando mapas: {error}</div>;
+  }
+
+  if (!mapLoaded) {
+    return <div style={{ padding: 20 }}>Cargando Google Maps...</div>;
+  }
 
   return (
     <div style={{ width: "100%", height: "100vh" }}>
-      <div style={{ padding: "10px 15px", background: "#f5f5f5", borderBottom: "1px solid #ddd" }}>
+      <div
+        style={{
+          padding: "10px 15px",
+          background: "#f5f5f5",
+          borderBottom: "1px solid #ddd",
+        }}
+      >
+        {/* Botón regresar */}
+        <button
+          type="button"
+          onClick={() => navigate("/user-dashboard")}
+          style={{
+            all: "unset",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "7px 14px",
+            marginBottom: "10px",
+            backgroundColor: "#0f2a44",
+            color: "#ffffff",
+            borderRadius: "8px",
+            fontSize: "14px",
+            fontWeight: 600,
+            lineHeight: 1,
+            cursor: "pointer",
+            boxShadow: "0 3px 8px rgba(15, 42, 68, 0.25)",
+          }}
+        >
+          ← Regresar
+        </button>
+
+        <br />
+
         <strong>Mapa de rutas</strong>
 
         {userRole && (
-          <span style={{ marginLeft: 10, color: "#666" }}>
-            — Rol: {userRole}
-          </span>
+          <span style={{ marginLeft: 10, color: "#666" }}>— Rol: {userRole}</span>
         )}
 
         {showNoRouteToday && (
@@ -352,10 +411,18 @@ const MapView = () => {
           </div>
         )}
 
-        <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div
+          style={{
+            marginTop: 10,
+            display: "flex",
+            gap: 10,
+            flexWrap: "wrap",
+          }}
+        >
           <div>
             <label style={{ fontSize: 12, color: "#444" }}>Día:</label>
             <br />
+
             <select
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
@@ -363,10 +430,10 @@ const MapView = () => {
             >
               <option value="">-- Seleccione un día --</option>
 
-              {/* ✅ CAMBIO 2: fecha + (día) */}
               {availableDates.map((d) => {
                 const dayName = dayNameFromISO(d);
                 const label = dayName ? `${d} (${dayName})` : d;
+
                 return (
                   <option key={d} value={d}>
                     {label}
@@ -379,6 +446,7 @@ const MapView = () => {
           <div>
             <label style={{ fontSize: 12, color: "#444" }}>Horario:</label>
             <br />
+
             <select
               value={selectedScheduleId}
               onChange={(e) => setSelectedScheduleId(e.target.value)}
@@ -399,7 +467,13 @@ const MapView = () => {
         </div>
       </div>
 
-      <div ref={mapRef} style={{ width: "100%", height: "calc(100vh - 120px)" }} />
+      <div
+        ref={mapRef}
+        style={{
+          width: "100%",
+          height: "calc(100vh - 165px)",
+        }}
+      />
     </div>
   );
 };
