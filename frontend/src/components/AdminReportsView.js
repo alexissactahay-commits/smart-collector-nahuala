@@ -65,6 +65,16 @@ const AdminReportsView = () => {
 
   return (
     <div className="reports-admin-container">
+
+      {/* Botón regresar */}
+      <button
+        id="admin-reports-small-back-button"
+        type="button"
+        onClick={() => navigate("/admin-dashboard")}
+      >
+        ← Regresar
+      </button>
+
       <h2>Reportes de Ciudadanos</h2>
 
       <div className="reports-list">
@@ -78,6 +88,7 @@ const AdminReportsView = () => {
             >
               <div className="report-header">
                 <h3>Reporte #{report.id}</h3>
+
                 <span className="report-date">
                   {report.fecha
                     ? new Date(report.fecha).toLocaleString()
@@ -107,6 +118,7 @@ const AdminReportsView = () => {
 
               {/* Acciones */}
               <div className="actions-row">
+
                 <button
                   onClick={() => updateStatus(report.id, "resolved")}
                   className="btn-success"
@@ -127,6 +139,7 @@ const AdminReportsView = () => {
                 >
                   Pendiente
                 </button>
+
               </div>
             </div>
           ))
