@@ -1,9 +1,12 @@
 // GenerateReports.js
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./GenerateReports.css";
 
 const GenerateReports = () => {
+  const navigate = useNavigate();
+
   const [allReports, setAllReports] = useState([]);
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -250,6 +253,16 @@ const GenerateReports = () => {
 
   return (
     <div className="generate-reports-container">
+
+      {/* Botón regresar */}
+      <button
+        id="generate-reports-small-back-button"
+        type="button"
+        onClick={() => navigate("/admin-dashboard")}
+      >
+        ← Regresar
+      </button>
+
       <h1>Generar Informes - Smart Collector</h1>
 
       <div className="filter-section">
