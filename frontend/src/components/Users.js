@@ -11,26 +11,15 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
 
-  // =========================
-  // CARGAR USUARIOS
-  // =========================
   const fetchUsers = useCallback(async () => {
     try {
       const res = await api.get('/api/admin/users/');
-
-      const data = Array.isArray(res.data)
-        ? res.data
-        : [];
-
+      const data = Array.isArray(res.data) ? res.data : [];
       setUsers(data);
-
     } catch (err) {
       console.error('Error al cargar usuarios:', err);
 
-      if (
-        err.response?.status === 401 ||
-        err.response?.status === 403
-      ) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
         localStorage.clear();
         navigate('/login', { replace: true });
       }
@@ -39,9 +28,6 @@ const Users = () => {
     }
   }, [navigate]);
 
-  // =========================
-  // VERIFICAR LOGIN
-  // =========================
   useEffect(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('userRole');
@@ -54,46 +40,27 @@ const Users = () => {
     fetchUsers();
   }, [navigate, fetchUsers]);
 
-  // =========================
-  // BOTÓN REGRESAR
-  // =========================
   const handleBack = () => {
     navigate('/admin-dashboard');
   };
 
-  // =========================
-  // CAMBIAR ROL
-  // =========================
   const updateRole = async (userId, newRole) => {
     try {
-
-      // ✅ USAR POST
       await api.post('/api/admin/users/', {
         id: userId,
         role: newRole,
       });
 
-      // actualizar estado local
       setUsers((prev) =>
         prev.map((user) =>
-          user.id === userId
-            ? {
-                ...user,
-                role: newRole,
-              }
-            : user
+          user.id === userId ? { ...user, role: newRole } : user
         )
       );
 
       setMessage(`Rol actualizado a ${newRole}`);
-
-      setTimeout(() => {
-        setMessage('');
-      }, 3000);
-
+      setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('Error al actualizar rol:', err);
-
       console.log('Backend:', err.response?.data);
 
       alert(
@@ -104,43 +71,23 @@ const Users = () => {
     }
   };
 
-  // =========================
-  // ACTIVAR / DESACTIVAR
-  // =========================
   const toggleActive = async (userId, isActive) => {
     try {
-
-      // ✅ USAR POST
       await api.post('/api/admin/users/', {
         id: userId,
         is_active: !isActive,
       });
 
-      // actualizar estado local
       setUsers((prev) =>
         prev.map((user) =>
-          user.id === userId
-            ? {
-                ...user,
-                is_active: !isActive,
-              }
-            : user
+          user.id === userId ? { ...user, is_active: !isActive } : user
         )
       );
 
-      setMessage(
-        isActive
-          ? 'Usuario desactivado'
-          : 'Usuario activado'
-      );
-
-      setTimeout(() => {
-        setMessage('');
-      }, 3000);
-
+      setMessage(isActive ? 'Usuario desactivado' : 'Usuario activado');
+      setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('Error al actualizar estado:', err);
-
       console.log('Backend:', err.response?.data);
 
       alert(
@@ -151,41 +98,23 @@ const Users = () => {
     }
   };
 
-  // =========================
-  // LOADING
-  // =========================
   if (loading) {
-    return (
-      <div className="users-container">
-        Cargando usuarios...
-      </div>
-    );
+    return <div className="users-container">Cargando usuarios...</div>;
   }
 
-  // =========================
-  // RENDER
-  // =========================
   return (
     <div className="users-container">
-
-{/* ✅ BOTÓN REGRESAR */}
-<button
-  className="back-button"
-  onClick={handleBack}
->
-  ← Regresar
-</button>
+      <div className="back-button-row">
+        <button type="button" className="back-button-small" onClick={handleBack}>
+          ← Regresar
+        </button>
+      </div>
 
       <h1>Lista de Usuarios - Smart Collector</h1>
 
-      {message && (
-        <div className="alert-message">
-          {message}
-        </div>
-      )}
+      {message && <div className="alert-message">{message}</div>}
 
       <table className="users-table">
-
         <thead>
           <tr>
             <th>Usuario</th>
@@ -197,90 +126,43 @@ const Users = () => {
         </thead>
 
         <tbody>
-
           {users.length === 0 ? (
             <tr>
-              <td
-                colSpan="5"
-                style={{ textAlign: 'center' }}
-              >
+              <td colSpan="5" style={{ textAlign: 'center' }}>
                 No hay usuarios registrados
               </td>
             </tr>
           ) : (
-
             users.map((user) => (
-
               <tr key={user.id}>
-
                 <td>{user.username}</td>
-
                 <td>{user.email}</td>
+                <td>{user.role === 'admin' ? 'Administrador' : 'Ciudadano'}</td>
+                <td>{user.is_active ? 'Activo' : 'Inactivo'}</td>
 
                 <td>
-                  {user.role === 'admin'
-                    ? 'Administrador'
-                    : 'Ciudadano'}
-                </td>
-
-                <td>
-                  {user.is_active
-                    ? 'Activo'
-                    : 'Inactivo'}
-                </td>
-
-                <td>
-
-                  {/* CAMBIAR ROL */}
                   {user.role === 'ciudadano' ? (
-                    <button
-                      onClick={() =>
-                        updateRole(user.id, 'admin')
-                      }
-                    >
+                    <button onClick={() => updateRole(user.id, 'admin')}>
                       Hacer Admin
                     </button>
                   ) : (
-                    <button
-                      onClick={() =>
-                        updateRole(user.id, 'ciudadano')
-                      }
-                    >
+                    <button onClick={() => updateRole(user.id, 'ciudadano')}>
                       Quitar Admin
                     </button>
                   )}
 
-                  {/* ACTIVAR / DESACTIVAR */}
                   <button
-                    onClick={() =>
-                      toggleActive(
-                        user.id,
-                        user.is_active
-                      )
-                    }
-                    className={
-                      user.is_active
-                        ? 'btn-deactivate'
-                        : 'btn-activate'
-                    }
+                    onClick={() => toggleActive(user.id, user.is_active)}
+                    className={user.is_active ? 'btn-deactivate' : 'btn-activate'}
                   >
-                    {user.is_active
-                      ? 'Desactivar'
-                      : 'Activar'}
+                    {user.is_active ? 'Desactivar' : 'Activar'}
                   </button>
-
                 </td>
-
               </tr>
-
             ))
-
           )}
-
         </tbody>
-
       </table>
-
     </div>
   );
 };

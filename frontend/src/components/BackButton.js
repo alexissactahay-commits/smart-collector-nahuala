@@ -6,17 +6,16 @@ const BackButton = ({ to }) => {
   const navigate = useNavigate();
 
   const handleBack = () => {
-    if (to) {
-      navigate(to);
-    } else {
-      navigate(-1);
-    }
+    if (to) navigate(to);
+    else navigate(-1);
   };
 
   return (
-    <button className="back-button" onClick={handleBack}>
-      <span>⬅</span> Regresar
-    </button>
+    <div className="back-button-wrapper">
+      <button type="button" className="back-button-small" onClick={handleBack}>
+        ← Regresar
+      </button>
+    </div>
   );
 };
 
