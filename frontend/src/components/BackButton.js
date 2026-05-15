@@ -15,7 +15,7 @@ const BackButton = ({ to }) => {
 
   return (
     <button className="back-button" onClick={handleBack}>
-      ← Regresar
+      <span>⬅</span> Regresar
     </button>
   );
 };
