@@ -11,21 +11,15 @@ const ReportsView = () => {
   const [reportes, setReportes] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // ===============================
-  // API URL NORMALIZADA (evita /api/api y ///)
-  // ===============================
   const API_URL = useMemo(() => {
     let base = process.env.REACT_APP_API_URL || "http://localhost:8000";
-    base = base.replace(/\/+$/, ""); // quitar slash final
-    if (!base.endsWith("/api")) base = `${base}/api`; // solo agregar si no existe
+    base = base.replace(/\/+$/, "");
+    if (!base.endsWith("/api")) base = `${base}/api`;
     return base;
   }, []);
 
   const getToken = () => localStorage.getItem("token");
 
-  // ===============================
-  // VERIFICAR SESIÓN
-  // ===============================
   useEffect(() => {
     const token = getToken();
     if (!token) {
@@ -33,12 +27,9 @@ const ReportsView = () => {
     }
   }, [navigate]);
 
-  // ===============================
-  // CARGAR MIS REPORTES
-  // ===============================
   const fetchReports = useCallback(async () => {
     const token = getToken();
-    if (!token) return; // ✅ evita llamar sin token (causa 401)
+    if (!token) return;
 
     try {
       const res = await axios.get(`${API_URL}/my-reports/`, {
@@ -52,26 +43,20 @@ const ReportsView = () => {
 
       console.error("Error al cargar reportes:", err?.response?.data || err?.message);
 
-      // ✅ Si token inválido/expirado
       if (status === 401 || status === 403) {
         localStorage.removeItem("token");
         localStorage.removeItem("userRole");
         localStorage.removeItem("username");
         localStorage.removeItem("userId");
         navigate("/login", { replace: true });
-        return;
       }
     }
   }, [API_URL, navigate]);
 
   useEffect(() => {
-    // ✅ solo cargar si hay token
     if (getToken()) fetchReports();
   }, [fetchReports]);
 
-  // ===============================
-  // ENVIAR REPORTE
-  // ===============================
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -93,7 +78,7 @@ const ReportsView = () => {
         `${API_URL}/my-reports/`,
         {
           detalle: detalle.trim(),
-          tipo: "incidencias", // ✅ coincide con tu modelo
+          tipo: "incidencias",
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -124,9 +109,6 @@ const ReportsView = () => {
     }
   };
 
-  // ===============================
-  // ELIMINAR REPORTE (OJO: tu backend NO tiene este endpoint)
-  // ===============================
   const handleDelete = async (id) => {
     if (!window.confirm("¿Seguro que deseas eliminar este reporte?")) return;
 
@@ -137,8 +119,6 @@ const ReportsView = () => {
     }
 
     try {
-      // ⚠️ Tu urls.py NO tiene /api/my-reports/<id>/
-      // Lo intento por si luego lo agregamos; si falla, aviso bonito.
       await axios.delete(`${API_URL}/my-reports/${id}/`, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 15000,
@@ -168,9 +148,6 @@ const ReportsView = () => {
     }
   };
 
-  // ===============================
-  // TRADUCIR ESTADO
-  // ===============================
   const renderStatus = (status) => {
     switch (status) {
       case "pending":
@@ -186,6 +163,16 @@ const ReportsView = () => {
 
   return (
     <div className="reports-container">
+      <div className="reports-back-row">
+        <button
+          id="reports-small-back-button"
+          type="button"
+          onClick={() => navigate("/user-dashboard")}
+        >
+          ← Regresar
+        </button>
+      </div>
+
       <h2>Reportar Incidencia</h2>
 
       <form onSubmit={handleSubmit} className="report-form">
