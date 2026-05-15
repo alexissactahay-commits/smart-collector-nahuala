@@ -31,7 +31,6 @@ const UserReports = () => {
     if (Array.isArray(payload)) return payload;
     if (!payload || typeof payload !== "object") return [];
 
-    // Soportar distintas llaves comunes
     if (Array.isArray(payload.results)) return payload.results;
     if (Array.isArray(payload.data)) return payload.data;
     if (Array.isArray(payload.reports)) return payload.reports;
@@ -54,7 +53,6 @@ const UserReports = () => {
     setLoading(true);
 
     try {
-      // ✅ IMPORTANTE: tu API real está en /api/admin/reports/
       const res = await api.get("/api/admin/reports/");
 
       const data = normalizeList(res.data);
@@ -85,7 +83,6 @@ const UserReports = () => {
   // ===========================
   const handleUpdateStatus = async (id, newStatus) => {
     try {
-      // ✅ IMPORTANTE: update también debe ir bajo /api
       await api.put(`/api/admin/reports/${id}/`, { status: newStatus });
 
       setReports((prev) =>
@@ -102,7 +99,7 @@ const UserReports = () => {
   };
 
   // ===========================
-  // ✅ NUEVO: Eliminar reporte (ADMIN)
+  // Eliminar reporte (ADMIN)
   // Endpoint: DELETE /api/my-reports/<id>/
   // ===========================
   const handleDeleteReport = async (id) => {
@@ -111,7 +108,6 @@ const UserReports = () => {
     try {
       await api.delete(`/api/my-reports/${id}/`);
 
-      // quitar de la tabla sin recargar
       setReports((prev) => prev.filter((r) => r.id !== id));
 
       setMessage("Reporte eliminado correctamente");
@@ -140,6 +136,15 @@ const UserReports = () => {
 
   return (
     <div className="user-reports-container">
+      {/* Botón regresar */}
+      <button
+        id="user-reports-small-back-button"
+        type="button"
+        onClick={() => navigate("/admin-dashboard")}
+      >
+        ← Regresar
+      </button>
+
       <h1>Reportes de Usuarios</h1>
 
       {message && <div className="alert-message">{message}</div>}
@@ -151,7 +156,7 @@ const UserReports = () => {
             <th>Detalle</th>
             <th>Fecha</th>
             <th>Estado</th>
-            <th>Acciones</th> {/* ✅ NUEVO */}
+            <th>Acciones</th>
           </tr>
         </thead>
 
@@ -166,12 +171,16 @@ const UserReports = () => {
                   <td>{getUsername(report)}</td>
                   <td>{detail || "Sin detalle"}</td>
                   <td>
-                    {rawDate ? new Date(rawDate).toLocaleString() : "No disponible"}
+                    {rawDate
+                      ? new Date(rawDate).toLocaleString()
+                      : "No disponible"}
                   </td>
                   <td>
                     <select
                       value={report.status || "pending"}
-                      onChange={(e) => handleUpdateStatus(report.id, e.target.value)}
+                      onChange={(e) =>
+                        handleUpdateStatus(report.id, e.target.value)
+                      }
                       className="status-select"
                     >
                       <option value="pending">Pendiente</option>
@@ -180,7 +189,6 @@ const UserReports = () => {
                     </select>
                   </td>
 
-                  {/* ✅ NUEVO: botón eliminar */}
                   <td>
                     <button
                       type="button"
