@@ -1,9 +1,12 @@
 // AddDate.js
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./AddDate.css";
 
 const AddDate = () => {
+  const navigate = useNavigate();
+
   // ================================
   // NORMALIZAR API_URL
   // ================================
@@ -52,8 +55,8 @@ const AddDate = () => {
   const [loading, setLoading] = useState(true);
 
   const [selectedRoute, setSelectedRoute] = useState("");
-  const [dateInput, setDateInput] = useState("");      // calendario (1 fecha)
-  const [pendingDates, setPendingDates] = useState([]); // lista de fechas por guardar
+  const [dateInput, setDateInput] = useState("");
+  const [pendingDates, setPendingDates] = useState([]);
 
   const ENDPOINT_DATES = `${API_URL}/admin/route-dates/`;
 
@@ -65,11 +68,8 @@ const AddDate = () => {
     []
   );
 
-  // Convierte "2026-02-03" -> "Martes" (según tu zona local)
   const getDayNameFromISODate = (isoDate) => {
     try {
-      // isoDate viene como YYYY-MM-DD
-      // Forzamos hora local para evitar desfase por UTC:
       const d = new Date(`${isoDate}T12:00:00`);
       return DAY_NAMES[d.getDay()];
     } catch {
@@ -87,7 +87,7 @@ const AddDate = () => {
 
     const iso = normalizeISO(dateInput);
     setPendingDates((prev) => {
-      if (prev.includes(iso)) return prev; // evita duplicados
+      if (prev.includes(iso)) return prev;
       return [...prev, iso].sort();
     });
 
@@ -152,6 +152,7 @@ const AddDate = () => {
       alert("Debe seleccionar una ruta.");
       return;
     }
+
     if (pendingDates.length === 0) {
       alert("Agrega al menos 1 fecha a la lista.");
       return;
@@ -161,7 +162,6 @@ const AddDate = () => {
     if (!token) return handle401();
 
     try {
-      // Guardamos 1 por 1 (más compatible)
       for (const d of pendingDates) {
         await axios.post(
           ENDPOINT_DATES,
@@ -212,7 +212,7 @@ const AddDate = () => {
   // AGRUPAR PARA MOSTRAR BONITO
   // ================================
   const grouped = useMemo(() => {
-    const map = new Map(); // routeId -> { routeName, items[] }
+    const map = new Map();
 
     for (const item of dates) {
       const routeId = item.route?.id || item.route_id || item.route;
@@ -223,13 +223,13 @@ const AddDate = () => {
       if (!map.has(routeId)) {
         map.set(routeId, { routeId, routeName, items: [] });
       }
+
       map.get(routeId).items.push(item);
     }
 
     const result = Array.from(map.values());
     result.sort((a, b) => String(a.routeName).localeCompare(String(b.routeName)));
 
-    // ordenar fechas dentro de cada ruta
     for (const r of result) {
       r.items.sort((x, y) => String(x.date).localeCompare(String(y.date)));
     }
@@ -244,10 +244,19 @@ const AddDate = () => {
 
   return (
     <div className="add-date-container">
+      <button
+        id="add-date-small-back-button"
+        type="button"
+        onClick={() => navigate("/admin-dashboard")}
+      >
+        ← Regresar
+      </button>
+
       <h1>📅 Programar Fechas para una Ruta</h1>
 
       <p style={{ marginTop: -8, color: "#555" }}>
-        Aquí asignas <strong>fechas</strong> a una ruta. El sistema mostrará el <strong>día</strong> automáticamente (Lunes, Martes, etc.).
+        Aquí asignas <strong>fechas</strong> a una ruta. El sistema mostrará el{" "}
+        <strong>día</strong> automáticamente (Lunes, Martes, etc.).
       </p>
 
       <label>Ruta:</label>
@@ -305,7 +314,8 @@ const AddDate = () => {
                 }}
               >
                 <div>
-                  📅 <strong>{d}</strong> — 🗓️ <strong>{getDayNameFromISODate(d)}</strong>
+                  📅 <strong>{d}</strong> — 🗓️{" "}
+                  <strong>{getDayNameFromISODate(d)}</strong>
                 </div>
 
                 <button
@@ -368,7 +378,8 @@ const AddDate = () => {
                   }}
                 >
                   <div>
-                    📅 <strong>{it.date}</strong> — 🗓️ <strong>{getDayNameFromISODate(it.date)}</strong>
+                    📅 <strong>{it.date}</strong> — 🗓️{" "}
+                    <strong>{getDayNameFromISODate(it.date)}</strong>
                   </div>
 
                   {it.id ? (
