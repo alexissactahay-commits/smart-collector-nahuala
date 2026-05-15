@@ -1,8 +1,12 @@
+// CalendarView.js
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./CalendarView.css";
 
 const CalendarView = () => {
+  const navigate = useNavigate();
+
   // ================================
   // NORMALIZAR API_URL
   // ================================
@@ -13,8 +17,6 @@ const CalendarView = () => {
   if (!API_URL.endsWith("/api")) {
     API_URL = `${API_URL}/api`;
   }
-
-  // ================================
 
   const [routeDates, setRouteDates] = useState([]);
   const [schedules, setSchedules] = useState([]);
@@ -92,7 +94,6 @@ const CalendarView = () => {
           return;
         }
 
-        // ✅ cargar fechas y horarios al mismo tiempo
         const [calendarRes, schedulesRes] = await Promise.all([
           axios.get(`${API_URL}/calendar/`, {
             headers: {
@@ -107,17 +108,8 @@ const CalendarView = () => {
           }),
         ]);
 
-        setRouteDates(
-          Array.isArray(calendarRes.data)
-            ? calendarRes.data
-            : []
-        );
-
-        setSchedules(
-          Array.isArray(schedulesRes.data)
-            ? schedulesRes.data
-            : []
-        );
+        setRouteDates(Array.isArray(calendarRes.data) ? calendarRes.data : []);
+        setSchedules(Array.isArray(schedulesRes.data) ? schedulesRes.data : []);
       } catch (err) {
         console.error("Error cargando calendario:", err);
 
@@ -166,39 +158,37 @@ const CalendarView = () => {
   // Obtener horarios reales de una ruta
   // ----------------------------
   const getSchedulesForRoute = (routeId) => {
-    return schedules.filter(
-      (s) => s?.route?.id === routeId
-    );
+    return schedules.filter((s) => s?.route?.id === routeId);
   };
 
   // ----------------------------
   // Loading
   // ----------------------------
   if (loading) {
-    return (
-      <div className="calendar-container">
-        Cargando calendario...
-      </div>
-    );
+    return <div className="calendar-container">Cargando calendario...</div>;
   }
 
   return (
     <div className="calendar-container">
+      {/* Botón regresar */}
+      <button
+        id="calendar-small-back-button"
+        type="button"
+        onClick={() => navigate("/user-dashboard")}
+      >
+        ← Regresar
+      </button>
+
       <h2>Calendario de Recolección - Smart Collector</h2>
 
       {alert.message && (
-        <div
-          className={`alert ${alert.type}`}
-          style={{ marginBottom: "15px" }}
-        >
+        <div className={`alert ${alert.type}`} style={{ marginBottom: "15px" }}>
           {alert.message}
         </div>
       )}
 
       {groupedByDate.sortedKeys.length === 0 ? (
-        <p className="no-service-text">
-          Aún no hay fechas asignadas.
-        </p>
+        <p className="no-service-text">Aún no hay fechas asignadas.</p>
       ) : (
         <div className="calendar-grid">
           {groupedByDate.sortedKeys.map((dateKey) => (
@@ -209,19 +199,12 @@ const CalendarView = () => {
                 {groupedByDate.map[dateKey].map((item) => {
                   const route = item?.route;
 
-                  const routeName =
-                    route?.name || "Ruta";
-
+                  const routeName = route?.name || "Ruta";
                   const routeId = route?.id;
 
-                  // ✅ horarios reales
-                  const realSchedules =
-                    getSchedulesForRoute(routeId);
+                  const realSchedules = getSchedulesForRoute(routeId);
 
-                  // ✅ comunidades
-                  const communities = Array.isArray(
-                    route?.communities
-                  )
+                  const communities = Array.isArray(route?.communities)
                     ? route.communities
                     : [];
 
@@ -235,11 +218,8 @@ const CalendarView = () => {
 
                   return (
                     <li key={item.id}>
-                      <div style={{ fontWeight: 600 }}>
-                        {routeName}
-                      </div>
+                      <div style={{ fontWeight: 600 }}>{routeName}</div>
 
-                      {/* ✅ horarios reales */}
                       {realSchedules.length > 0 ? (
                         realSchedules.map((sch) => (
                           <div
@@ -249,14 +229,8 @@ const CalendarView = () => {
                               fontSize: "0.9rem",
                             }}
                           >
-                            Horario:{" "}
-                            {formatTime(
-                              sch.start_time
-                            )}{" "}
-                            -{" "}
-                            {formatTime(
-                              sch.end_time
-                            )}
+                            Horario: {formatTime(sch.start_time)} -{" "}
+                            {formatTime(sch.end_time)}
                           </div>
                         ))
                       ) : (
@@ -270,24 +244,15 @@ const CalendarView = () => {
                         </div>
                       )}
 
-                      {/* ✅ comunidades */}
-                      {communitiesText ? (
+                      {communitiesText && (
                         <div
                           style={{
-                            color: "#666",
+                            color: "#444",
                             fontSize: "0.9rem",
+                            marginTop: "4px",
                           }}
                         >
                           Comunidades: {communitiesText}
-                        </div>
-                      ) : (
-                        <div
-                          style={{
-                            color: "#999",
-                            fontSize: "0.9rem",
-                          }}
-                        >
-                          Comunidades no asignadas
                         </div>
                       )}
                     </li>
