@@ -57,15 +57,9 @@ const Users = () => {
   // =========================
   // BOTÓN REGRESAR
   // =========================
-<div className="back-button-row">
-  <button
-    type="button"
-    className="back-button-small"
-    onClick={() => navigate('/admin-dashboard')}
-  >
-    ← Regresar
-  </button>
-</div>
+  const handleBack = () => {
+    navigate('/admin-dashboard');
+  };
 
   // =========================
   // CAMBIAR ROL
