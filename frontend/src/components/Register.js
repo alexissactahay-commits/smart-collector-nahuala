@@ -49,12 +49,12 @@ const Register = () => {
 
     try {
       await axios.post(
-        buildURL("/api/register/"), // ✅ endpoint correcto
+        buildURL("/api/register/"),
         {
           username: username.trim(),
           email: email.trim(),
           password: password,
-          role: "citizen", // ✅ rol por defecto recomendado (consistente)
+          role: "citizen",
         },
         {
           headers: { "Content-Type": "application/json" },
@@ -70,7 +70,6 @@ const Register = () => {
       const status = error?.response?.status;
 
       if (status === 400) {
-        // Puede venir por email repetido, username repetido, password inválida, etc.
         const data = error?.response?.data;
         const msg =
           (typeof data === "string" && data) ||
@@ -93,6 +92,12 @@ const Register = () => {
   return (
     <div className="register-container">
       <div className="register-box">
+        <img
+          src="/Log_smar_collector.png"
+          alt="Logo Smart Collector"
+          className="logo"
+        />
+
         {/* Botón regresar */}
         <button
           id="register-small-back-button"
@@ -101,12 +106,6 @@ const Register = () => {
         >
           ← Regresar
         </button>
-
-        <img
-          src="/Log_smar_collector.png"
-          alt="Logo Smart Collector"
-          className="logo"
-        />
 
         <h2>Crear Cuenta</h2>
 

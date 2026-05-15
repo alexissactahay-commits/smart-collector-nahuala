@@ -93,16 +93,15 @@
 
 #register-small-back-button {
   all: unset !important;
-  display: inline-flex !important;
+
+  display: flex !important;
   align-items: center !important;
   justify-content: center !important;
 
-  width: auto !important;
-  min-width: auto !important;
-  max-width: fit-content !important;
+  width: fit-content !important;
 
-  padding: 7px 14px !important;
-  margin-bottom: 16px !important;
+  margin: 0 auto 20px auto !important;
+  padding: 8px 16px !important;
 
   background-color: #0f2a44 !important;
   color: #ffffff !important;
