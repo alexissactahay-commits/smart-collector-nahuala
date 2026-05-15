@@ -10,30 +10,16 @@ const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
-  const handleBack = () => {
-  navigate('/admin-dashboard');
-};
 
-  // =========================
-  // CARGAR USUARIOS
-  // =========================
   const fetchUsers = useCallback(async () => {
     try {
       const res = await api.get('/api/admin/users/');
-
-      const data = Array.isArray(res.data)
-        ? res.data
-        : [];
-
+      const data = Array.isArray(res.data) ? res.data : [];
       setUsers(data);
-
     } catch (err) {
       console.error('Error al cargar usuarios:', err);
 
-      if (
-        err.response?.status === 401 ||
-        err.response?.status === 403
-      ) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
         localStorage.clear();
         navigate('/login', { replace: true });
       }
@@ -42,9 +28,6 @@ const Users = () => {
     }
   }, [navigate]);
 
-  // =========================
-  // VERIFICAR LOGIN
-  // =========================
   useEffect(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('userRole');
@@ -57,183 +40,77 @@ const Users = () => {
     fetchUsers();
   }, [navigate, fetchUsers]);
 
-  useEffect(() => {
-  const style = document.createElement("style");
-  style.innerHTML = `
-    #users-return-button {
-      all: unset !important;
-      display: inline-flex !important;
-      width: 105px !important;
-      height: 34px !important;
-      background: #2f6fd0 !important;
-      color: white !important;
-      border-radius: 4px !important;
-      font-size: 13px !important;
-      font-weight: 700 !important;
-      align-items: center !important;
-      justify-content: center !important;
-      cursor: pointer !important;
-      margin-bottom: 10px !important;
-    }
-
-    #users-return-button:hover {
-      background: #2458a8 !important;
-    }
-  `;
-  document.head.appendChild(style);
-
-  return () => {
-    document.head.removeChild(style);
-  };
-}, []);
-
-  // =========================
-  // BOTÓN REGRESAR
-  // =========================
-  <div style={{ textAlign: "left", marginBottom: "10px" }}>
-  <span
-    onClick={() => navigate("/admin-dashboard")}
-    style={{
-      display: "inline-block",
-      background: "#2f6fd0",
-      color: "white",
-      padding: "8px 14px",
-      borderRadius: "4px",
-      fontSize: "13px",
-      fontWeight: "700",
-      cursor: "pointer",
-      width: "auto",
-    }}
-  >
-    ← Regresar
-  </span>
-  </div>
-
-  // =========================
-  // CAMBIAR ROL
-  // =========================
   const updateRole = async (userId, newRole) => {
     try {
-
-      // ✅ USAR POST
       await api.post('/api/admin/users/', {
         id: userId,
         role: newRole,
       });
 
-      // actualizar estado local
       setUsers((prev) =>
         prev.map((user) =>
-          user.id === userId
-            ? {
-                ...user,
-                role: newRole,
-              }
-            : user
+          user.id === userId ? { ...user, role: newRole } : user
         )
       );
 
       setMessage(`Rol actualizado a ${newRole}`);
-
-      setTimeout(() => {
-        setMessage('');
-      }, 3000);
-
+      setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('Error al actualizar rol:', err);
-
-      console.log('Backend:', err.response?.data);
-
       alert(
         err.response?.data?.detail ||
-        err.response?.data?.message ||
-        'Error al actualizar el rol.'
+          err.response?.data?.message ||
+          'Error al actualizar el rol.'
       );
     }
   };
 
-  // =========================
-  // ACTIVAR / DESACTIVAR
-  // =========================
   const toggleActive = async (userId, isActive) => {
     try {
-
-      // ✅ USAR POST
       await api.post('/api/admin/users/', {
         id: userId,
         is_active: !isActive,
       });
 
-      // actualizar estado local
       setUsers((prev) =>
         prev.map((user) =>
-          user.id === userId
-            ? {
-                ...user,
-                is_active: !isActive,
-              }
-            : user
+          user.id === userId ? { ...user, is_active: !isActive } : user
         )
       );
 
-      setMessage(
-        isActive
-          ? 'Usuario desactivado'
-          : 'Usuario activado'
-      );
-
-      setTimeout(() => {
-        setMessage('');
-      }, 3000);
-
+      setMessage(isActive ? 'Usuario desactivado' : 'Usuario activado');
+      setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('Error al actualizar estado:', err);
-
-      console.log('Backend:', err.response?.data);
-
       alert(
         err.response?.data?.detail ||
-        err.response?.data?.message ||
-        'Error al actualizar el estado del usuario.'
+          err.response?.data?.message ||
+          'Error al actualizar el estado del usuario.'
       );
     }
   };
 
-  // =========================
-  // LOADING
-  // =========================
   if (loading) {
-    return (
-      <div className="users-container">
-        Cargando usuarios...
-      </div>
-    );
+    return <div className="users-container">Cargando usuarios...</div>;
   }
 
-  // =========================
-  // RENDER
-  // =========================
   return (
     <div className="users-container">
-
-  {/* ✅ BOTÓN REGRESAR */}
-  <button
-    className="back-button"
-    onClick={handleBack}
-  >
-    ← Regresar
-  </button>
+      <div className="users-back-row">
+        <button
+          id="users-small-back-button"
+          type="button"
+          onClick={() => navigate('/admin-dashboard')}
+        >
+          ← Regresar
+        </button>
+      </div>
 
       <h1>Lista de Usuarios - Smart Collector</h1>
 
-      {message && (
-        <div className="alert-message">
-          {message}
-        </div>
-      )}
+      {message && <div className="alert-message">{message}</div>}
 
       <table className="users-table">
-
         <thead>
           <tr>
             <th>Usuario</th>
@@ -245,90 +122,53 @@ const Users = () => {
         </thead>
 
         <tbody>
-
           {users.length === 0 ? (
             <tr>
-              <td
-                colSpan="5"
-                style={{ textAlign: 'center' }}
-              >
+              <td colSpan="5" style={{ textAlign: 'center' }}>
                 No hay usuarios registrados
               </td>
             </tr>
           ) : (
-
             users.map((user) => (
-
               <tr key={user.id}>
-
                 <td>{user.username}</td>
-
                 <td>{user.email}</td>
+                <td>{user.role === 'admin' ? 'Administrador' : 'Ciudadano'}</td>
+                <td>{user.is_active ? 'Activo' : 'Inactivo'}</td>
 
                 <td>
-                  {user.role === 'admin'
-                    ? 'Administrador'
-                    : 'Ciudadano'}
-                </td>
+                  <div className="action-buttons">
+                    {user.role === 'ciudadano' ? (
+                      <button
+                        className="action-btn btn-make-admin"
+                        onClick={() => updateRole(user.id, 'admin')}
+                      >
+                        Hacer Admin
+                      </button>
+                    ) : (
+                      <button
+                        className="action-btn btn-remove-admin"
+                        onClick={() => updateRole(user.id, 'ciudadano')}
+                      >
+                        Quitar Admin
+                      </button>
+                    )}
 
-                <td>
-                  {user.is_active
-                    ? 'Activo'
-                    : 'Inactivo'}
-                </td>
-
-                <td>
-
-                  {/* CAMBIAR ROL */}
-                  {user.role === 'ciudadano' ? (
                     <button
-                      onClick={() =>
-                        updateRole(user.id, 'admin')
-                      }
+                      onClick={() => toggleActive(user.id, user.is_active)}
+                      className={`action-btn ${
+                        user.is_active ? 'btn-deactivate' : 'btn-activate'
+                      }`}
                     >
-                      Hacer Admin
+                      {user.is_active ? 'Desactivar' : 'Activar'}
                     </button>
-                  ) : (
-                    <button
-                      onClick={() =>
-                        updateRole(user.id, 'ciudadano')
-                      }
-                    >
-                      Quitar Admin
-                    </button>
-                  )}
-
-                  {/* ACTIVAR / DESACTIVAR */}
-                  <button
-                    onClick={() =>
-                      toggleActive(
-                        user.id,
-                        user.is_active
-                      )
-                    }
-                    className={
-                      user.is_active
-                        ? 'btn-deactivate'
-                        : 'btn-activate'
-                    }
-                  >
-                    {user.is_active
-                      ? 'Desactivar'
-                      : 'Activar'}
-                  </button>
-
+                  </div>
                 </td>
-
               </tr>
-
             ))
-
           )}
-
         </tbody>
-
       </table>
-
     </div>
   );
 };

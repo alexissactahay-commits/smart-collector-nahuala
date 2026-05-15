@@ -36,49 +36,34 @@
   background: #f8f9fa;
 }
 
-/* Contenedor de los botones de acción */
 .action-buttons {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   justify-content: center;
+  flex-direction: column;
 }
 
-/* Estilo base para los botones */
 .action-btn {
-  padding: 6px 10px;
+  padding: 8px 10px;
   font-size: 13px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 90px;
+  min-width: 120px;
   text-align: center;
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-.action-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-}
-
-/* Botones específicos */
-.btn-make-admin {
-  background: #17a2b8;
-  color: white;
-}
-
-.btn-make-admin:hover {
-  background: #138496;
-}
-
+.btn-make-admin,
 .btn-remove-admin {
-  background: #fd7e14;
+  background: #1f4173;
   color: white;
 }
 
+.btn-make-admin:hover,
 .btn-remove-admin:hover {
-  background: #e07000;
+  background: #16315a;
 }
 
 .btn-activate {
@@ -99,30 +84,31 @@
   background: #c82333;
 }
 
-/* ===== BOTON REGRESAR PEQUEÑO ===== */
+/* BOTÓN REGRESAR PEQUEÑO */
 .users-back-row {
-  margin-bottom: 15px;
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 10px;
 }
 
-.btn-back-users {
-  width: auto !important;
+#users-small-back-button {
+  all: unset !important;
   display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 18px !important;
-  background: #1e3a78;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  min-width: unset !important;
-  max-width: 140px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  align-items: center !important;
+  justify-content: center !important;
+  width: 105px !important;
+  height: 34px !important;
+  background: #2f6fd0 !important;
+  color: white !important;
+  border-radius: 4px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  text-align: center !important;
+  box-sizing: border-box !important;
 }
 
-.btn-back-users:hover {
-  background: #16305f;
+#users-small-back-button:hover {
+  background: #2458a8 !important;
 }
