@@ -1,10 +1,11 @@
 // CollectionPoints.js
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./CollectionPoints.css";
 
 // ================================
-// Cargar Google Maps Script (sin librerías externas)
+// Cargar Google Maps Script
 // ================================
 const loadGoogleMapsScript = (apiKey) => {
   return new Promise((resolve, reject) => {
@@ -33,16 +34,14 @@ const loadGoogleMapsScript = (apiKey) => {
 };
 
 const CollectionPoints = () => {
-  // ================================
-  // NORMALIZAR API_URL
-  // ================================
+  const navigate = useNavigate();
+
   let API_URL = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000";
   API_URL = API_URL.replace(/\/+$/, "");
   if (!API_URL.endsWith("/api")) API_URL = `${API_URL}/api`;
 
   const GOOGLE_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
 
-  // ✅ headers dinámicos (token siempre actualizado)
   const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
     return {
@@ -75,37 +74,26 @@ const CollectionPoints = () => {
     );
   };
 
-  // ================================
-  // STATE
-  // ================================
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // 🔥 modo edición
   const [editingId, setEditingId] = useState(null);
 
-  // Formulario
   const [form, setForm] = useState({
     name: "",
     description: "",
   });
 
-  // Puntos dibujados en el mapa
-  const [drawPoints, setDrawPoints] = useState([]); // [{lat, lng}]
+  const [drawPoints, setDrawPoints] = useState([]);
   const [mapError, setMapError] = useState("");
 
-  // ================================
-  // GOOGLE MAPS refs
-  // ================================
-  const mapRef = useRef(null); // div container
-  const gmapRef = useRef(null); // google map instance
-  const polylineRef = useRef(null); // google polyline
-  const markersRef = useRef([]); // markers for points
+  const mapRef = useRef(null);
+  const gmapRef = useRef(null);
+  const polylineRef = useRef(null);
+  const markersRef = useRef([]);
   const clickListenerRef = useRef(null);
   const initTimerRef = useRef(null);
 
   const defaultCenter = useMemo(() => {
-    // Centro aproximado (ajusta si quieres)
     return { lat: 14.84, lng: -91.32 };
   }, []);
 
@@ -117,6 +105,7 @@ const CollectionPoints = () => {
       markersRef.current.forEach((m) => m.setMap(null));
       markersRef.current = [];
     }
+
     if (polylineRef.current) {
       polylineRef.current.setMap(null);
       polylineRef.current = null;
@@ -144,6 +133,7 @@ const CollectionPoints = () => {
       strokeOpacity: 1,
       strokeWeight: 5,
     });
+
     polylineRef.current.setMap(gmapRef.current);
 
     const bounds = new window.google.maps.LatLngBounds();
@@ -171,22 +161,17 @@ const CollectionPoints = () => {
     clearMapDrawing();
   };
 
-  // ================================
-  // Init Google Map (FIX: asegura que el div exista)
-  // ================================
   useEffect(() => {
     let mounted = true;
 
     const tryInitMap = () => {
       if (!mounted) return;
 
-      // si el div aún no existe, reintenta
       if (!mapRef.current) {
         initTimerRef.current = setTimeout(tryInitMap, 200);
         return;
       }
 
-      // si ya existe el mapa, no lo recrees
       if (gmapRef.current) return;
 
       const map = new window.google.maps.Map(mapRef.current, {
@@ -197,7 +182,6 @@ const CollectionPoints = () => {
 
       gmapRef.current = map;
 
-      // Click to add point
       const listener = map.addListener("click", (e) => {
         const lat = e.latLng.lat();
         const lng = e.latLng.lng();
@@ -211,10 +195,8 @@ const CollectionPoints = () => {
 
       clickListenerRef.current = listener;
 
-      // si ya hay puntos en estado
       if (drawPoints.length > 0) renderDrawingOnMap(drawPoints);
 
-      // por si el contenedor se dibujó después, forzamos resize
       setTimeout(() => {
         if (gmapRef.current) {
           window.google.maps.event.trigger(gmapRef.current, "resize");
@@ -227,8 +209,6 @@ const CollectionPoints = () => {
       try {
         await loadGoogleMapsScript(GOOGLE_KEY);
         if (!mounted) return;
-
-        // ya que el script cargó, intenta crear el mapa
         tryInitMap();
       } catch (e) {
         console.error(e);
@@ -242,19 +222,19 @@ const CollectionPoints = () => {
 
     return () => {
       mounted = false;
+
       try {
         if (initTimerRef.current) clearTimeout(initTimerRef.current);
       } catch (_) {}
+
       try {
         if (clickListenerRef.current) clickListenerRef.current.remove();
       } catch (_) {}
     };
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [GOOGLE_KEY, defaultCenter]);
 
-  // ================================
-  // GET ROUTES
-  // ================================
   const fetchRoutes = async () => {
     try {
       const { token, authHeaders } = getAuthHeaders();
@@ -273,12 +253,10 @@ const CollectionPoints = () => {
 
   useEffect(() => {
     fetchRoutes();
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ================================
-  // BUILD PAYLOAD
-  // ================================
   const buildPayload = () => {
     const points = drawPoints.map((p, idx) => ({
       latitude: Number(p.lat),
@@ -289,12 +267,9 @@ const CollectionPoints = () => {
     return {
       name: form.name.trim(),
       description: (form.description || "").trim(),
-
-      // defaults para compatibilidad
       day_of_week: "Lunes",
       start_time: "08:00",
       end_time: "12:00",
-
       points,
     };
   };
@@ -306,9 +281,6 @@ const CollectionPoints = () => {
     return null;
   };
 
-  // ================================
-  // CREATE ROUTE
-  // ================================
   const createRoute = async (e) => {
     e.preventDefault();
 
@@ -334,9 +306,6 @@ const CollectionPoints = () => {
     }
   };
 
-  // ================================
-  // UPDATE ROUTE
-  // ================================
   const updateRoute = async (e) => {
     e.preventDefault();
 
@@ -383,11 +352,9 @@ const CollectionPoints = () => {
     }
   };
 
-  // ================================
-  // EDIT / DELETE
-  // ================================
   const startEdit = (route) => {
     setEditingId(route.id);
+
     setForm({
       name: route.name || "",
       description: route.description || "",
@@ -413,6 +380,7 @@ const CollectionPoints = () => {
     const ok = window.confirm(
       "¿Seguro que deseas ELIMINAR esta ruta? Esta acción no se puede deshacer."
     );
+
     if (!ok) return;
 
     const urlWithSlash = `${API_URL}/admin/routes/${routeId}/`;
@@ -440,11 +408,17 @@ const CollectionPoints = () => {
     }
   };
 
-  // ================================
-  // UI (FIX: NO retornar temprano, para que el mapa exista)
-  // ================================
   return (
     <div className="collection-points-container">
+      {/* Botón regresar */}
+      <button
+        id="collection-points-small-back-button"
+        type="button"
+        onClick={() => navigate("/admin-dashboard")}
+      >
+        ← Regresar
+      </button>
+
       <h1>Puntos de Recolección - Smart Collector</h1>
 
       {loading && (
@@ -456,7 +430,10 @@ const CollectionPoints = () => {
       <div className="existing-routes">
         <h2>Registrar Ruta (Dibujada en Mapa)</h2>
 
-        <form onSubmit={editingId ? updateRoute : createRoute} style={{ marginBottom: 20 }}>
+        <form
+          onSubmit={editingId ? updateRoute : createRoute}
+          style={{ marginBottom: 20 }}
+        >
           <input
             type="text"
             name="name"
@@ -474,7 +451,6 @@ const CollectionPoints = () => {
             style={{ width: 720, maxWidth: "100%", height: 70, marginBottom: 12 }}
           />
 
-          {/* MAPA DIBUJO */}
           <div style={{ marginBottom: 12 }}>
             <div
               style={{
@@ -486,6 +462,7 @@ const CollectionPoints = () => {
               }}
             >
               <strong>Dibuja la ruta:</strong>
+
               <span style={{ color: "#666" }}>
                 (clic en el mapa para agregar puntos — mínimo 2)
               </span>
@@ -567,9 +544,17 @@ const CollectionPoints = () => {
         ) : (
           routes.map((route) => {
             const pts = Array.isArray(route.points) ? route.points : [];
+
             return (
               <div key={route.id} className="route-card">
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    flexWrap: "wrap",
+                  }}
+                >
                   <h3 style={{ margin: 0 }}>{route.name}</h3>
 
                   <div style={{ display: "flex", gap: 10 }}>
@@ -600,12 +585,17 @@ const CollectionPoints = () => {
                 {pts.length > 0 && (
                   <div className="points-list">
                     <h4>Puntos:</h4>
+
                     {[...pts]
                       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
                       .slice(0, 10)
                       .map((p) => (
-                        <div key={p.id || `${p.latitude}-${p.longitude}`} className="point-item">
-                          📍 ({p.latitude}, {p.longitude}) {p.order != null ? `— orden: ${p.order}` : ""}
+                        <div
+                          key={p.id || `${p.latitude}-${p.longitude}`}
+                          className="point-item"
+                        >
+                          📍 ({p.latitude}, {p.longitude}){" "}
+                          {p.order != null ? `— orden: ${p.order}` : ""}
                         </div>
                       ))}
 
