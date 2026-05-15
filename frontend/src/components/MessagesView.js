@@ -1,8 +1,12 @@
+// MessagesView.js
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./MessagesView.css";
 
 const MessagesView = () => {
+  const navigate = useNavigate();
+
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
@@ -17,12 +21,18 @@ const MessagesView = () => {
 
   const isUnreadEstado = (estado) => {
     const e = String(estado || "").toLowerCase().trim();
-    return e === "pendiente" || e === "enviada" || e === "sin leer" || e === "unread";
+    return (
+      e === "pendiente" ||
+      e === "enviada" ||
+      e === "sin leer" ||
+      e === "unread"
+    );
   };
 
   const fetchMessages = async () => {
     try {
       const token = localStorage.getItem("token");
+
       if (!token) {
         setMessages([]);
         return;
@@ -33,11 +43,15 @@ const MessagesView = () => {
         timeout: 15000,
       });
 
-      const formattedMessages = (Array.isArray(response.data) ? response.data : []).map((msg) => ({
+      const formattedMessages = (
+        Array.isArray(response.data) ? response.data : []
+      ).map((msg) => ({
         id: msg.id,
         title: "Mensaje del Administrador",
         body: msg.message || msg.detalle || "Mensaje sin contenido",
-        date: msg.created_at ? new Date(msg.created_at).toLocaleString() : "Fecha no disponible",
+        date: msg.created_at
+          ? new Date(msg.created_at).toLocaleString()
+          : "Fecha no disponible",
         sender: msg.sender?.username || "Administración",
         estado: msg.estado || "pendiente",
         isUnread: isUnreadEstado(msg.estado),
@@ -55,7 +69,9 @@ const MessagesView = () => {
       await fetchMessages();
       setLoading(false);
     };
+
     run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [API_URL]);
 
   const handleMarkAsRead = async (message) => {
@@ -116,6 +132,7 @@ const MessagesView = () => {
       console.error("Error al eliminar mensaje:", error);
 
       const status = error?.response?.status;
+
       if (status === 401 || status === 403) {
         alert("Tu sesión expiró. Inicia sesión nuevamente.");
         localStorage.removeItem("token");
@@ -132,6 +149,16 @@ const MessagesView = () => {
 
   return (
     <div className="messages-container">
+
+      {/* Botón regresar */}
+      <button
+        id="messages-small-back-button"
+        type="button"
+        onClick={() => navigate("/user-dashboard")}
+      >
+        ← Regresar
+      </button>
+
       <h2>Mensajes Oficiales - Smart Collector</h2>
 
       {loading ? (
@@ -148,14 +175,21 @@ const MessagesView = () => {
                 onClick={() => handleMarkAsRead(message)}
                 style={{
                   cursor: message.isUnread ? "pointer" : "default",
-                  borderLeft: message.isUnread ? "6px solid #d90429" : "6px solid #1f4173",
+                  borderLeft: message.isUnread
+                    ? "6px solid #d90429"
+                    : "6px solid #1f4173",
                   background: message.isUnread ? "#fff7f7" : "#ffffff",
                 }}
-                title={message.isUnread ? "Clic para marcar como leído" : "Mensaje leído"}
+                title={
+                  message.isUnread
+                    ? "Clic para marcar como leído"
+                    : "Mensaje leído"
+                }
               >
                 <div className="message-header">
                   <h3>
                     {message.title}
+
                     {message.isUnread && (
                       <span
                         style={{
@@ -171,11 +205,19 @@ const MessagesView = () => {
                       </span>
                     )}
                   </h3>
-                  <span className="message-date">{message.date}</span>
+
+                  <span className="message-date">
+                    {message.date}
+                  </span>
                 </div>
 
-                <p className="message-body">{message.body}</p>
-                <p className="message-sender">— {message.sender}</p>
+                <p className="message-body">
+                  {message.body}
+                </p>
+
+                <p className="message-sender">
+                  — {message.sender}
+                </p>
 
                 <button
                   type="button"
@@ -188,7 +230,8 @@ const MessagesView = () => {
                     border: "none",
                     padding: "10px 14px",
                     borderRadius: "10px",
-                    cursor: deletingId === message.id ? "not-allowed" : "pointer",
+                    cursor:
+                      deletingId === message.id ? "not-allowed" : "pointer",
                     fontWeight: 700,
                   }}
                 >
