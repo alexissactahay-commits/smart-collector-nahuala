@@ -93,11 +93,21 @@ const Register = () => {
   return (
     <div className="register-container">
       <div className="register-box">
+        {/* Botón regresar */}
+        <button
+          id="register-small-back-button"
+          type="button"
+          onClick={() => navigate("/login")}
+        >
+          ← Regresar
+        </button>
+
         <img
           src="/Log_smar_collector.png"
           alt="Logo Smart Collector"
           className="logo"
         />
+
         <h2>Crear Cuenta</h2>
 
         <form onSubmit={handleSubmit}>
