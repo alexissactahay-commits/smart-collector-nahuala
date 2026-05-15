@@ -1,3 +1,4 @@
+// ResetPassword.js
 import React, { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -36,12 +37,14 @@ const ResetPassword = () => {
       setError("Las contraseñas no coinciden.");
       return;
     }
+
     if (String(newPassword).length < 6) {
       setError("La contraseña debe tener al menos 6 caracteres.");
       return;
     }
 
     setLoading(true);
+
     try {
       const res = await axios.post(
         `${API_URL}/reset-password/`,
@@ -49,7 +52,7 @@ const ResetPassword = () => {
           uidb64: uid,
           token: token,
           new_password: newPassword,
-          confirm_password: newPassword2, // ✅ opcional (backend lo acepta si lo mandas)
+          confirm_password: newPassword2,
         },
         {
           headers: { "Content-Type": "application/json" },
@@ -61,6 +64,7 @@ const ResetPassword = () => {
         res?.data?.message ||
         res?.data?.detail ||
         "Contraseña actualizada correctamente.";
+
       setMessage(okMsg);
 
       setTimeout(() => navigate("/login"), 1200);
@@ -81,8 +85,20 @@ const ResetPassword = () => {
 
   return (
     <div className="reset-password-container">
+      {/* Botón regresar */}
+      <button
+        id="reset-password-small-back-button"
+        type="button"
+        onClick={() => navigate("/login")}
+      >
+        ← Regresar
+      </button>
+
       <h2>Restablecer contraseña</h2>
-      <p>Ingresa tu nueva contraseña para tu cuenta de Smart Collector.</p>
+
+      <p>
+        Ingresa tu nueva contraseña para tu cuenta de Smart Collector.
+      </p>
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
@@ -115,6 +131,7 @@ const ResetPassword = () => {
       </form>
 
       {message && <div className="success-message">{message}</div>}
+
       {error && <div className="error-message">{error}</div>}
     </div>
   );
