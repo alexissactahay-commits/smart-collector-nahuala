@@ -62,9 +62,9 @@ const Users = () => {
   // =========================
   <div className="users-back-row">
   <button
-    id="btn-regresar-users"
     type="button"
-    onClick={handleBack}
+    className="btn-back-users"
+    onClick={() => navigate('/admin-dashboard')}
   >
     ← Regresar
   </button>

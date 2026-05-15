@@ -99,39 +99,30 @@
   background: #c82333;
 }
 
-/* BOTÓN REGRESAR ÚNICO - NO AFECTA LOS DEMÁS */
+/* ===== BOTON REGRESAR PEQUEÑO ===== */
 .users-back-row {
-  width: 100%;
-  display: flex;
-  justify-content: flex-start;
-  margin: 0 0 10px 0;
-  padding: 0;
+  margin-bottom: 15px;
 }
 
-#btn-regresar-users {
-  all: unset !important;
-
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
+.btn-back-users {
   width: auto !important;
-  min-width: 0 !important;
-  max-width: fit-content !important;
-
-  padding: 8px 14px !important;
-  background: #2f6fd0 !important;
-  color: white !important;
-
-  border-radius: 4px !important;
-  font-size: 13px !important;
-  font-weight: 700 !important;
-  line-height: 1 !important;
-
-  cursor: pointer !important;
-  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px !important;
+  background: #1e3a78;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  min-width: unset !important;
+  max-width: 140px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
-#btn-regresar-users:hover {
-  background: #2458a8 !important;
+.btn-back-users:hover {
+  background: #16305f;
 }
