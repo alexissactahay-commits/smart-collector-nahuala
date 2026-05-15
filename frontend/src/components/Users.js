@@ -57,29 +57,46 @@ const Users = () => {
     fetchUsers();
   }, [navigate, fetchUsers]);
 
+  useEffect(() => {
+  const style = document.createElement("style");
+  style.innerHTML = `
+    #users-return-button {
+      all: unset !important;
+      display: inline-flex !important;
+      width: 105px !important;
+      height: 34px !important;
+      background: #2f6fd0 !important;
+      color: white !important;
+      border-radius: 4px !important;
+      font-size: 13px !important;
+      font-weight: 700 !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      margin-bottom: 10px !important;
+    }
+
+    #users-return-button:hover {
+      background: #2458a8 !important;
+    }
+  `;
+  document.head.appendChild(style);
+
+  return () => {
+    document.head.removeChild(style);
+  };
+}, []);
+
   // =========================
   // BOTÓN REGRESAR
   // =========================
-  <div
+  <button
+  id="users-return-button"
+  type="button"
   onClick={() => navigate('/admin-dashboard')}
-  style={{
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '110px',
-    height: '34px',
-    backgroundColor: '#2f6fd0',
-    color: '#fff',
-    borderRadius: '4px',
-    fontSize: '13px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    marginBottom: '10px',
-    userSelect: 'none'
-  }}
   >
   ← Regresar
-  </div>
+  </button>
 
   // =========================
   // CAMBIAR ROL
